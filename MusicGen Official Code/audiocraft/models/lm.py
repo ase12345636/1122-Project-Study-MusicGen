@@ -167,6 +167,10 @@ class LMModel(StreamingModule):
         self.dim = dim
         self.pattern_provider = pattern_provider
         self.two_step_cfg = two_step_cfg
+        '''
+        由於 Encodec 的 output 是 2048 dim; lm 的 input 是 1536 dim,
+        所以需要在做 Embedding 的時候需要對 dim 做轉換
+        '''
         self.emb = nn.ModuleList(
             [ScaledEmbedding(embed_dim, dim, lr=emb_lr) for _ in range(n_q)])
         if 'activation' in kwargs:

@@ -26,6 +26,11 @@ class ChromaExtractor(nn.Module):
         argmax (bool, optional): Whether to use argmax. Defaults to False.
         norm (float, optional): Norm for chroma normalization. Defaults to inf.
     """
+    '''
+        window size : 2^14
+        hop length : 2^10
+    '''
+
     def __init__(self, sample_rate: int, n_chroma: int = 12, radix2_exp: int = 12, nfft: tp.Optional[int] = None,
                  winlen: tp.Optional[int] = None, winhop: tp.Optional[int] = None, argmax: bool = False,
                  norm: float = torch.inf):
@@ -55,7 +60,8 @@ class ChromaExtractor(nn.Module):
 
         spec = self.spec(wav).squeeze(1)
         raw_chroma = torch.einsum('cf,...ft->...ct', self.fbanks, spec)
-        norm_chroma = torch.nn.functional.normalize(raw_chroma, p=self.norm, dim=-2, eps=1e-6)
+        norm_chroma = torch.nn.functional.normalize(
+            raw_chroma, p=self.norm, dim=-2, eps=1e-6)
         norm_chroma = rearrange(norm_chroma, 'b d t -> b t d')
 
         if self.argmax:

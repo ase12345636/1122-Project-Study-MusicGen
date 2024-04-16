@@ -99,6 +99,10 @@ def get_lm_model(cfg: omegaconf.DictConfig) -> LMModel:
             getattr(cfg, 'classifier_free_guidance'))
         cfg_prob, cfg_coef = cls_free_guidance['training_dropout'], cls_free_guidance['inference_coef']
         fuser = get_condition_fuser(cfg)
+
+        '''
+        載入 Conditioner
+        '''
         condition_provider = get_conditioner_provider(
             kwargs["dim"], cfg).to(cfg.device)
         # enforce cross-att programmatically
@@ -111,8 +115,15 @@ def get_lm_model(cfg: omegaconf.DictConfig) -> LMModel:
                 {'modeling': q_modeling, 'delay': {'delays': list(range(n_q))}}
             )
 
+        '''
+        載入 Encodec 的 Codebook
+        '''
         pattern_provider = get_codebooks_pattern_provider(
             n_q, codebooks_pattern_cfg)
+
+        '''
+        載入 Transformer Decoder
+        '''
         lm_class = MagnetLMModel if cfg.lm_model == 'transformer_lm_magnet' else LMModel
         return lm_class(
             pattern_provider=pattern_provider,

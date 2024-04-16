@@ -569,6 +569,13 @@ class ChromaStemConditioner(WaveformConditioner):
         stem_sources: list = self.demucs.sources  # type: ignore
         self.stem_indices = torch.LongTensor(
             [stem_sources.index('vocals'), stem_sources.index('other')]).to(device)
+
+        '''
+        載入 Melody Conditioner
+
+        window size : 2^14
+        hop length : 2^10
+        '''
         self.chroma = ChromaExtractor(sample_rate=sample_rate, n_chroma=n_chroma,
                                       radix2_exp=radix2_exp, **kwargs).to(device)
         self.chroma_len = self._get_chroma_len()
