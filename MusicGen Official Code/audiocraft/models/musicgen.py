@@ -47,6 +47,7 @@ class MusicGen(BaseGenModel):
         max_duration (float, optional): maximum duration the model can produce,
             otherwise, inferred from the training params.
     """
+
     def __init__(self, name: str, compression_model: CompressionModel, lm: LMModel,
                  max_duration: tp.Optional[float] = None):
         super().__init__(name, compression_model, lm, max_duration)
@@ -148,8 +149,12 @@ class MusicGen(BaseGenModel):
                 if melody is not None:
                     assert melody.dim() == 2, "One melody in the list has the wrong number of dims."
 
+        '''
+        將 Input Audio 的 Sample Rate 轉成規定的 Sample Rate
+        '''
         melody_wavs = [
-            convert_audio(wav, melody_sample_rate, self.sample_rate, self.audio_channels)
+            convert_audio(wav, melody_sample_rate,
+                          self.sample_rate, self.audio_channels)
             if wav is not None else None
             for wav in melody_wavs]
         attributes, prompt_tokens = self._prepare_tokens_and_attributes(descriptions=descriptions, prompt=None,
@@ -210,7 +215,8 @@ class MusicGen(BaseGenModel):
 
         if prompt is not None:
             if descriptions is not None:
-                assert len(descriptions) == len(prompt), "Prompt and nb. descriptions doesn't match"
+                assert len(descriptions) == len(
+                    prompt), "Prompt and nb. descriptions doesn't match"
             prompt = prompt.to(self.device)
             prompt_tokens, scale = self.compression_model.encode(prompt)
             assert scale is None
@@ -230,7 +236,8 @@ class MusicGen(BaseGenModel):
             torch.Tensor: Generated audio, of shape [B, C, T], T is defined by the generation params.
         """
         total_gen_len = int(self.duration * self.frame_rate)
-        max_prompt_len = int(min(self.duration, self.max_duration) * self.frame_rate)
+        max_prompt_len = int(
+            min(self.duration, self.max_duration) * self.frame_rate)
         current_gen_offset: int = 0
 
         def _progress_callback(generated_tokens: int, tokens_to_generate: int):
@@ -274,7 +281,8 @@ class MusicGen(BaseGenModel):
 
             while current_gen_offset + prompt_length < total_gen_len:
                 time_offset = current_gen_offset / self.frame_rate
-                chunk_duration = min(self.duration - time_offset, self.max_duration)
+                chunk_duration = min(
+                    self.duration - time_offset, self.max_duration)
                 max_gen_len = int(chunk_duration * self.frame_rate)
                 for attr, ref_wav in zip(attributes, ref_wavs):
                     wav_length = ref_wav.length.item()
@@ -284,7 +292,8 @@ class MusicGen(BaseGenModel):
                     # we have to do it here rather than in conditioners.py as otherwise
                     # we wouldn't have the full wav.
                     initial_position = int(time_offset * self.sample_rate)
-                    wav_target_length = int(self.max_duration * self.sample_rate)
+                    wav_target_length = int(
+                        self.max_duration * self.sample_rate)
                     positions = torch.arange(initial_position,
                                              initial_position + wav_target_length, device=self.device)
                     attr.wav['self_wav'] = WavCondition(
@@ -299,7 +308,8 @@ class MusicGen(BaseGenModel):
                 if prompt_tokens is None:
                     all_tokens.append(gen_tokens)
                 else:
-                    all_tokens.append(gen_tokens[:, :, prompt_tokens.shape[-1]:])
+                    all_tokens.append(
+                        gen_tokens[:, :, prompt_tokens.shape[-1]:])
                 prompt_tokens = gen_tokens[:, :, stride_tokens:]
                 prompt_length = prompt_tokens.shape[-1]
                 current_gen_offset += stride_tokens

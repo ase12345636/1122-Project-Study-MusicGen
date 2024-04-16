@@ -50,22 +50,26 @@ class MusicGenSolver(base.StandardSolver):
         self._cached_batch_loader = None
         if cfg.cache.path:
             if cfg.cache.write:
-                self._cached_batch_writer = CachedBatchWriter(Path(cfg.cache.path))
+                self._cached_batch_writer = CachedBatchWriter(
+                    Path(cfg.cache.path))
                 if self.cfg.cache.write_num_shards:
-                    self.logger.warning("Multiple shard cache, best_metric_name will be set to None.")
+                    self.logger.warning(
+                        "Multiple shard cache, best_metric_name will be set to None.")
                     self._best_metric_name = None
             else:
                 self._cached_batch_loader = CachedBatchLoader(
                     Path(cfg.cache.path), cfg.dataset.batch_size, cfg.dataset.num_workers,
                     min_length=self.cfg.optim.updates_per_epoch or 1)
                 self.dataloaders['original_train'] = self.dataloaders['train']
-                self.dataloaders['train'] = self._cached_batch_loader  # type: ignore
+                # type: ignore
+                self.dataloaders['train'] = self._cached_batch_loader
 
     @staticmethod
     def get_eval_solver_from_sig(sig: str, dtype: tp.Optional[str] = None,
                                  device: tp.Optional[str] = None, autocast: bool = True,
                                  batch_size: tp.Optional[int] = None,
-                                 override_cfg: tp.Optional[tp.Union[dict, omegaconf.DictConfig]] = None,
+                                 override_cfg: tp.Optional[tp.Union[dict,
+                                                                    omegaconf.DictConfig]] = None,
                                  **kwargs):
         """Mostly a convenience function around magma.train.get_solver_from_sig,
         populating all the proper param, deactivating EMA, FSDP, loading the best state,
@@ -79,7 +83,8 @@ class MusicGenSolver(base.StandardSolver):
             override_cfg (dict or omegaconf.DictConfig or None): potential device, as a string, i.e. 'cuda'.
         """
         from audiocraft import train
-        our_override_cfg: tp.Dict[str, tp.Any] = {'optim': {'ema': {'use': False}}}
+        our_override_cfg: tp.Dict[str, tp.Any] = {
+            'optim': {'ema': {'use': False}}}
         our_override_cfg['autocast'] = autocast
         if dtype is not None:
             our_override_cfg['dtype'] = dtype
@@ -114,12 +119,15 @@ class MusicGenSolver(base.StandardSolver):
         """Instantiate models and optimizer."""
         # we can potentially not use all quantizers with which the EnCodec model was trained
         # (e.g. we trained the model with quantizers dropout)
+        '''
+        載入 Encodec
+        '''
         self.compression_model = CompressionSolver.wrapped_model_from_checkpoint(
             self.cfg, self.cfg.compression_model_checkpoint, device=self.device)
         assert self.compression_model.sample_rate == self.cfg.sample_rate, (
             f"Compression model sample rate is {self.compression_model.sample_rate} but "
             f"Solver sample rate is {self.cfg.sample_rate}."
-            )
+        )
         # ensure we have matching configuration between LM and compression model
         assert self.cfg.transformer_lm.card == self.compression_model.cardinality, (
             "Cardinalities of the LM and compression model don't match: ",
@@ -134,15 +142,26 @@ class MusicGenSolver(base.StandardSolver):
         self.logger.info("Compression model has %d codebooks with %d cardinality, and a framerate of %d",
                          self.compression_model.num_codebooks, self.compression_model.cardinality,
                          self.compression_model.frame_rate)
+
         # instantiate LM model
-        self.model: models.LMModel = models.builders.get_lm_model(self.cfg).to(self.device)
+        '''
+        載入 LM Model
+        '''
+        self.model: models.LMModel = models.builders.get_lm_model(
+            self.cfg).to(self.device)
         if self.cfg.fsdp.use:
             assert not self.cfg.autocast, "Cannot use autocast with fsdp"
             self.model = self.wrap_with_fsdp(self.model)
         self.register_ema('model')
+
         # initialize optimization
-        self.optimizer = builders.get_optimizer(builders.get_optim_parameter_groups(self.model), self.cfg.optim)
-        self.lr_scheduler = builders.get_lr_scheduler(self.optimizer, self.cfg.schedule, self.total_updates)
+        '''
+        載入 Optimizer
+        '''
+        self.optimizer = builders.get_optimizer(
+            builders.get_optim_parameter_groups(self.model), self.cfg.optim)
+        self.lr_scheduler = builders.get_lr_scheduler(
+            self.optimizer, self.cfg.schedule, self.total_updates)
         self.register_stateful('model', 'optimizer', 'lr_scheduler')
         self.register_best_state('model')
         self.autocast_dtype = {
@@ -163,7 +182,8 @@ class MusicGenSolver(base.StandardSolver):
 
     def build_dataloaders(self) -> None:
         """Instantiate audio dataloaders for each stage."""
-        self.dataloaders = builders.get_audio_datasets(self.cfg, dataset_type=self.DATASET_TYPE)
+        self.dataloaders = builders.get_audio_datasets(
+            self.cfg, dataset_type=self.DATASET_TYPE)
 
     def show(self) -> None:
         """Show the compression model and LM model."""
@@ -231,7 +251,8 @@ class MusicGenSolver(base.StandardSolver):
         ce = torch.zeros([], device=targets.device)
         ce_per_codebook: tp.List[torch.Tensor] = []
         for k in range(K):
-            logits_k = logits[:, k, ...].contiguous().view(-1, logits.size(-1))  # [B x T, card]
+            logits_k = logits[:, k, ...].contiguous(
+            ).view(-1, logits.size(-1))  # [B x T, card]
             targets_k = targets[:, k, ...].contiguous().view(-1)  # [B x T]
             mask_k = mask[:, k, ...].contiguous().view(-1)  # [B x T]
             ce_targets = targets_k[mask_k]
@@ -278,8 +299,10 @@ class MusicGenSolver(base.StandardSolver):
             # In that case the batch will be a tuple coming from the _cached_batch_writer bit below.
             infos, = batch  # type: ignore
             assert all([isinstance(info, AudioInfo) for info in infos])
-            assert all([info.audio_tokens is not None for info in infos])  # type: ignore
-            audio_tokens = torch.stack([info.audio_tokens for info in infos]).to(self.device)  # type: ignore
+            # type: ignore
+            assert all([info.audio_tokens is not None for info in infos])
+            audio_tokens = torch.stack([info.audio_tokens for info in infos]).to(
+                self.device)  # type: ignore
             audio_tokens = audio_tokens.long()
             for info in infos:
                 if isinstance(info, MusicInfo):
@@ -287,12 +310,14 @@ class MusicGenSolver(base.StandardSolver):
                     # then you must be using the chroma cache! otherwise the code will try
                     # to use this segment and fail (by that I mean you will see NaN everywhere).
                     info.self_wav = WavCondition(
-                        torch.full([1, info.channels, info.total_frames], float('NaN')),
+                        torch.full(
+                            [1, info.channels, info.total_frames], float('NaN')),
                         length=torch.tensor([info.n_frames]),
                         sample_rate=[info.sample_rate],
                         path=[info.meta.path],
                         seek_time=[info.seek_time])
-                    dataset = get_dataset_from_loader(self.dataloaders['original_train'])
+                    dataset = get_dataset_from_loader(
+                        self.dataloaders['original_train'])
                     assert isinstance(dataset, MusicDataset), type(dataset)
                     if dataset.paraphraser is not None and info.description is not None:
                         # Hackingly reapplying paraphraser when using cache.
@@ -317,7 +342,8 @@ class MusicGenSolver(base.StandardSolver):
             condition_tensors = self.model.condition_provider(tokenized)
 
         # create a padding mask to hold valid vs invalid positions
-        padding_mask = torch.ones_like(audio_tokens, dtype=torch.bool, device=audio_tokens.device)
+        padding_mask = torch.ones_like(
+            audio_tokens, dtype=torch.bool, device=audio_tokens.device)
         # replace encodec tokens from padded audio with special_token_id
         if self.cfg.tokens.padding_with_special_token:
             audio_tokens = audio_tokens.clone()
@@ -328,7 +354,8 @@ class MusicGenSolver(base.StandardSolver):
                 n_samples = infos[i].n_frames
                 audio_sample_rate = infos[i].sample_rate
                 # take the last token generated from actual audio frames (non-padded audio)
-                valid_tokens = math.floor(float(n_samples) / audio_sample_rate * token_sample_rate)
+                valid_tokens = math.floor(
+                    float(n_samples) / audio_sample_rate * token_sample_rate)
                 audio_tokens[i, :, valid_tokens:] = self.model.special_token_id
                 padding_mask[i, :, valid_tokens:] = 0
 
@@ -362,10 +389,12 @@ class MusicGenSolver(base.StandardSolver):
             torch.cuda.set_sync_debug_mode('warn')
 
         with self.autocast:
-            model_output = self.model.compute_predictions(audio_tokens, [], condition_tensors)  # type: ignore
+            model_output = self.model.compute_predictions(
+                audio_tokens, [], condition_tensors)  # type: ignore
             logits = model_output.logits
             mask = padding_mask & model_output.mask
-            ce, ce_per_codebook = self._compute_cross_entropy(logits, audio_tokens, mask)
+            ce, ce_per_codebook = self._compute_cross_entropy(
+                logits, audio_tokens, mask)
             loss = ce
         self.deadlock_detect.update('loss')
 
@@ -394,7 +423,8 @@ class MusicGenSolver(base.StandardSolver):
                 self.scaler.unscale_(self.optimizer)
             if self.cfg.optim.max_norm:
                 if self.cfg.fsdp.use:
-                    metrics['grad_norm'] = self.model.clip_grad_norm_(self.cfg.optim.max_norm)  # type: ignore
+                    metrics['grad_norm'] = self.model.clip_grad_norm_(
+                        self.cfg.optim.max_norm)  # type: ignore
                 else:
                     metrics['grad_norm'] = torch.nn.utils.clip_grad_norm_(
                         self.model.parameters(), self.cfg.optim.max_norm
@@ -455,7 +485,8 @@ class MusicGenSolver(base.StandardSolver):
             prompt_audio = None
         else:
             assert prompt_duration < gen_duration, "Prompt duration must be lower than target generation duration"
-            prompt_audio_frames = int(prompt_duration * self.compression_model.sample_rate)
+            prompt_audio_frames = int(
+                prompt_duration * self.compression_model.sample_rate)
             prompt_audio = audio[..., :prompt_audio_frames]
 
         # get audio tokens from compression model
@@ -470,7 +501,8 @@ class MusicGenSolver(base.StandardSolver):
 
         # generate by sampling from the LM
         with self.autocast:
-            total_gen_len = math.ceil(gen_duration * self.compression_model.frame_rate)
+            total_gen_len = math.ceil(
+                gen_duration * self.compression_model.frame_rate)
             gen_tokens = self.model.generate(
                 prompt_tokens, attributes, max_gen_len=total_gen_len,
                 num_samples=num_samples, **self.generation_params)
@@ -497,7 +529,8 @@ class MusicGenSolver(base.StandardSolver):
         self.logger.info(f"Generating samples in {sample_manager.base_folder}")
         loader = self.dataloaders['generate']
         updates = len(loader)
-        lp = self.log_progress(generate_stage_name, loader, total=updates, updates=self.log_updates)
+        lp = self.log_progress(generate_stage_name, loader,
+                               total=updates, updates=self.log_updates)
 
         dataset = get_dataset_from_loader(loader)
         dataset_duration = dataset.segment_duration
@@ -527,7 +560,8 @@ class MusicGenSolver(base.StandardSolver):
                         elif isinstance(cond_val, WavCondition):
                             cond_dict[cond_key] = cond_val.path
                         elif isinstance(cond_val, JointEmbedCondition):
-                            cond_dict[cond_key] = cond_val.text  # only support text at inference for now
+                            # only support text at inference for now
+                            cond_dict[cond_key] = cond_val.text
                         else:
                             # if we reached this point, it is not clear how to log the condition
                             # so we just log the type.
@@ -557,7 +591,8 @@ class MusicGenSolver(base.StandardSolver):
                     gen_unprompted_outputs = self.run_generate_step(
                         batch, gen_duration=target_duration, prompt_duration=None,
                         **self.generation_params)
-                    gen_unprompted_audio = gen_unprompted_outputs['gen_audio'].cpu()
+                    gen_unprompted_audio = gen_unprompted_outputs['gen_audio'].cpu(
+                    )
                     rtf = gen_unprompted_outputs['rtf']
                 sample_manager.add_samples(
                     gen_unprompted_audio, self.epoch, hydrated_conditions,
@@ -622,38 +657,47 @@ class MusicGenSolver(base.StandardSolver):
             kldiv = builders.get_kldiv(self.cfg.metrics.kld).to(self.device)
             should_run_eval = True
         if self.cfg.evaluate.metrics.text_consistency:
-            text_consistency = builders.get_text_consistency(self.cfg.metrics.text_consistency).to(self.device)
+            text_consistency = builders.get_text_consistency(
+                self.cfg.metrics.text_consistency).to(self.device)
             should_run_eval = True
         if self.cfg.evaluate.metrics.chroma_cosine:
-            chroma_cosine = builders.get_chroma_cosine_similarity(self.cfg.metrics.chroma_cosine).to(self.device)
+            chroma_cosine = builders.get_chroma_cosine_similarity(
+                self.cfg.metrics.chroma_cosine).to(self.device)
             # if we have predefind wavs for chroma we should purge them for computing the cosine metric
             has_predefined_eval_chromas = 'self_wav' in self.model.condition_provider.conditioners and \
-                                          self.model.condition_provider.conditioners['self_wav'].has_eval_wavs()
+                                          self.model.condition_provider.conditioners['self_wav'].has_eval_wavs(
+                                          )
             if has_predefined_eval_chromas:
                 warn_once(self.logger, "Attempting to run cosine eval for config with pre-defined eval chromas! "
                                        'Resetting eval chromas to None for evaluation.')
                 eval_chroma_wavs = self.model.condition_provider.conditioners.self_wav.eval_wavs  # type: ignore
-                self.model.condition_provider.conditioners.self_wav.reset_eval_wavs(None)  # type: ignore
+                self.model.condition_provider.conditioners.self_wav.reset_eval_wavs(
+                    None)  # type: ignore
             should_run_eval = True
 
         def get_compressed_audio(audio: torch.Tensor) -> torch.Tensor:
-            audio_tokens, scale = self.compression_model.encode(audio.to(self.device))
-            compressed_audio = self.compression_model.decode(audio_tokens, scale)
+            audio_tokens, scale = self.compression_model.encode(
+                audio.to(self.device))
+            compressed_audio = self.compression_model.decode(
+                audio_tokens, scale)
             return compressed_audio[..., :audio.shape[-1]]
 
         metrics: dict = {}
         if should_run_eval:
             loader = self.dataloaders['evaluate']
             updates = len(loader)
-            lp = self.log_progress(f'{evaluate_stage_name} inference', loader, total=updates, updates=self.log_updates)
+            lp = self.log_progress(
+                f'{evaluate_stage_name} inference', loader, total=updates, updates=self.log_updates)
             average = flashy.averager()
             dataset = get_dataset_from_loader(loader)
             assert isinstance(dataset, AudioDataset)
-            self.logger.info(f"Computing evaluation metrics on {len(dataset)} samples")
+            self.logger.info(
+                f"Computing evaluation metrics on {len(dataset)} samples")
 
             for idx, batch in enumerate(lp):
                 audio, meta = batch
-                assert all([self.cfg.sample_rate == m.sample_rate for m in meta])
+                assert all([self.cfg.sample_rate ==
+                           m.sample_rate for m in meta])
 
                 target_duration = audio.shape[-1] / self.cfg.sample_rate
                 if self.cfg.evaluate.fixed_generation_duration:
@@ -668,11 +712,15 @@ class MusicGenSolver(base.StandardSolver):
 
                 normalize_kwargs = dict(self.cfg.generate.audio)
                 normalize_kwargs.pop('format', None)
-                y_pred = torch.stack([normalize_audio(w, **normalize_kwargs) for w in y_pred], dim=0).cpu()
+                y_pred = torch.stack(
+                    [normalize_audio(w, **normalize_kwargs) for w in y_pred], dim=0).cpu()
                 y = audio.cpu()  # should already be on CPU but just in case
-                sizes = torch.tensor([m.n_frames for m in meta])  # actual sizes without padding
-                sample_rates = torch.tensor([m.sample_rate for m in meta])  # sample rates for audio samples
-                audio_stems = [Path(m.meta.path).stem + f"_{m.seek_time}" for m in meta]
+                # actual sizes without padding
+                sizes = torch.tensor([m.n_frames for m in meta])
+                # sample rates for audio samples
+                sample_rates = torch.tensor([m.sample_rate for m in meta])
+                audio_stems = [Path(m.meta.path).stem +
+                               f"_{m.seek_time}" for m in meta]
 
                 if fad is not None:
                     if self.cfg.metrics.fad.use_gt:
@@ -693,7 +741,8 @@ class MusicGenSolver(base.StandardSolver):
                     chroma_cosine.update(y_pred, y, sizes, sample_rates)
                     # restore chroma conditioner's eval chroma wavs
                     if eval_chroma_wavs is not None:
-                        self.model.condition_provider.conditioners['self_wav'].reset_eval_wavs(eval_chroma_wavs)
+                        self.model.condition_provider.conditioners['self_wav'].reset_eval_wavs(
+                            eval_chroma_wavs)
 
             flashy.distrib.barrier()
             if fad is not None:

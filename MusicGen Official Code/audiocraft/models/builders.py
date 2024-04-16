@@ -86,17 +86,23 @@ def get_compression_model(cfg: omegaconf.DictConfig) -> CompressionModel:
 
 def get_lm_model(cfg: omegaconf.DictConfig) -> LMModel:
     """Instantiate a transformer LM."""
+    '''
+    載入 LM Model
+    '''
     if cfg.lm_model in ['transformer_lm', 'transformer_lm_magnet']:
         kwargs = dict_from_config(getattr(cfg, 'transformer_lm'))
         n_q = kwargs['n_q']
         q_modeling = kwargs.pop('q_modeling', None)
         codebooks_pattern_cfg = getattr(cfg, 'codebooks_pattern')
         attribute_dropout = dict_from_config(getattr(cfg, 'attribute_dropout'))
-        cls_free_guidance = dict_from_config(getattr(cfg, 'classifier_free_guidance'))
+        cls_free_guidance = dict_from_config(
+            getattr(cfg, 'classifier_free_guidance'))
         cfg_prob, cfg_coef = cls_free_guidance['training_dropout'], cls_free_guidance['inference_coef']
         fuser = get_condition_fuser(cfg)
-        condition_provider = get_conditioner_provider(kwargs["dim"], cfg).to(cfg.device)
-        if len(fuser.fuse2cond['cross']) > 0:  # enforce cross-att programmatically
+        condition_provider = get_conditioner_provider(
+            kwargs["dim"], cfg).to(cfg.device)
+        # enforce cross-att programmatically
+        if len(fuser.fuse2cond['cross']) > 0:
             kwargs['cross_attention'] = True
         if codebooks_pattern_cfg.modeling is None:
             assert q_modeling is not None, \
@@ -105,7 +111,8 @@ def get_lm_model(cfg: omegaconf.DictConfig) -> LMModel:
                 {'modeling': q_modeling, 'delay': {'delays': list(range(n_q))}}
             )
 
-        pattern_provider = get_codebooks_pattern_provider(n_q, codebooks_pattern_cfg)
+        pattern_provider = get_codebooks_pattern_provider(
+            n_q, codebooks_pattern_cfg)
         lm_class = MagnetLMModel if cfg.lm_model == 'transformer_lm_magnet' else LMModel
         return lm_class(
             pattern_provider=pattern_provider,
@@ -137,9 +144,11 @@ def get_conditioner_provider(output_dim: int, cfg: omegaconf.DictConfig) -> Cond
         model_type = cond_cfg['model']
         model_args = cond_cfg[model_type]
         if model_type == 't5':
-            conditioners[str(cond)] = T5Conditioner(output_dim=output_dim, device=device, **model_args)
+            conditioners[str(cond)] = T5Conditioner(
+                output_dim=output_dim, device=device, **model_args)
         elif model_type == 'lut':
-            conditioners[str(cond)] = LUTConditioner(output_dim=output_dim, **model_args)
+            conditioners[str(cond)] = LUTConditioner(
+                output_dim=output_dim, **model_args)
         elif model_type == 'chroma_stem':
             conditioners[str(cond)] = ChromaStemConditioner(
                 output_dim=output_dim,
@@ -155,7 +164,8 @@ def get_conditioner_provider(output_dim: int, cfg: omegaconf.DictConfig) -> Cond
             )
         else:
             raise ValueError(f"Unrecognized conditioning model: {model_type}")
-    conditioner = ConditioningProvider(conditioners, device=device, **condition_provider_args)
+    conditioner = ConditioningProvider(
+        conditioners, device=device, **condition_provider_args)
     return conditioner
 
 
@@ -186,7 +196,8 @@ def get_codebooks_pattern_provider(n_q: int, cfg: omegaconf.DictConfig) -> Codeb
 
 def get_debug_compression_model(device='cpu', sample_rate: int = 32000):
     """Instantiate a debug compression model to be used for unit tests."""
-    assert sample_rate in [16000, 32000], "unsupported sample rate for debug compression model"
+    assert sample_rate in [
+        16000, 32000], "unsupported sample rate for debug compression model"
     model_ratios = {
         16000: [10, 8, 8],  # 25 Hz at 16kHz
         32000: [10, 8, 16]  # 25 Hz at 32kHz
@@ -215,7 +226,7 @@ def get_diffusion_model(cfg: omegaconf.DictConfig):
     channels = cfg.channels
     num_steps = cfg.schedule.num_steps
     return DiffusionUnet(
-            chin=channels, num_steps=num_steps, **cfg.diffusion_unet)
+        chin=channels, num_steps=num_steps, **cfg.diffusion_unet)
 
 
 def get_processor(cfg, sample_rate: int = 24000):
@@ -225,7 +236,8 @@ def get_processor(cfg, sample_rate: int = 24000):
         kw.pop('use')
         kw.pop('name')
         if cfg.name == "multi_band_processor":
-            sample_processor = MultiBandProcessor(sample_rate=sample_rate, **kw)
+            sample_processor = MultiBandProcessor(
+                sample_rate=sample_rate, **kw)
     return sample_processor
 
 
@@ -250,11 +262,20 @@ def get_debug_lm_model(device='cpu'):
 def get_wrapped_compression_model(
         compression_model: CompressionModel,
         cfg: omegaconf.DictConfig) -> CompressionModel:
+    '''
+    設定 Encodec for 多聲道音訊
+    '''
     if hasattr(cfg, 'interleave_stereo_codebooks'):
         if cfg.interleave_stereo_codebooks.use:
             kwargs = dict_from_config(cfg.interleave_stereo_codebooks)
             kwargs.pop('use')
-            compression_model = InterleaveStereoCompressionModel(compression_model, **kwargs)
+            compression_model = InterleaveStereoCompressionModel(
+                compression_model, **kwargs)
+    '''
+    設定 Encodec 的 Codebook 數量
+    
+    註 : Encodec 的 Codebook 數量是可調的
+    '''
     if hasattr(cfg, 'compression_model_n_q'):
         if cfg.compression_model_n_q is not None:
             compression_model.set_num_codebooks(cfg.compression_model_n_q)
