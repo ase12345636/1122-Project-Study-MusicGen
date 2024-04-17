@@ -5,15 +5,17 @@ audiocraft/train -> ./solvers/builders -> ./solvers/musicgen ->
 
    |-> ./solvers/compression -> ./models/builders > ./models/encodec -> ./models/quantization/qt -> |
    |                                                                                                |
-   |                        |-> ./modules/conditioners -> ./modules/chroma  -> |                    |
+   |                        |-> ./modules/conditioners -> ./modules/chroma --> |                    |
    |                        |                                                  |                    |
--> |-> ./models/builders -> |-> ./modules/codebooks_patterns                -> |                 -> | ->
+-> |-> ./models/builders -> |-> ./modules/codebooks_patterns ----------------> |------------------> | ->
    |                        |                                                  |                    |
-   |                        |-> ./models/lm                                 -> |                    |
+   |                        |-> ./models/lm ---------------------------------> |                    |
    |                                                                                                |
-   |-> ./solvers/builders -> optimizer ( haven't seen )                                          -> |
+   |-> ./solvers/builders -> optimizer ( haven't seen ) ------------------------------------------> |
 
 -> ./solvers/base -> ./solvers/musicgen
+
+
 
 Medium Model ( text + melody ) :
     total parameter : 1.5B
