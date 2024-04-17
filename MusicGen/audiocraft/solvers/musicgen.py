@@ -36,6 +36,12 @@ class MusicGenSolver(base.StandardSolver):
     DATASET_TYPE: builders.DatasetType = builders.DatasetType.MUSIC
 
     def __init__(self, cfg: omegaconf.DictConfig):
+        '''
+        繼承自 solvers.base.StandardSolver
+
+        base.StandardSolver.__init__() ->
+        MusicGenSolver.build_dataloaders() -> MusicGenSolver.build_model() -> base.StandardSolver.initialize_ema()
+        '''
         super().__init__(cfg)
         # easier access to sampling parameters
         self.generation_params = {
@@ -116,11 +122,19 @@ class MusicGenSolver(base.StandardSolver):
         return self._best_metric_name
 
     def build_model(self) -> None:
+        '''
+        建立模型架構
+        '''
+
         """Instantiate models and optimizer."""
         # we can potentially not use all quantizers with which the EnCodec model was trained
         # (e.g. we trained the model with quantizers dropout)
+
         '''
-        載入 Encodec
+        載入 Pretrained Encodec
+        ( encodec_large_nq4_s640 )
+
+        compression.CompressionSolver.wrapped_model_from_checkpoint()
         '''
         self.compression_model = CompressionSolver.wrapped_model_from_checkpoint(
             self.cfg, self.cfg.compression_model_checkpoint, device=self.device)
@@ -146,6 +160,8 @@ class MusicGenSolver(base.StandardSolver):
         # instantiate LM model
         '''
         載入 LM Model
+
+        models.builders.get_lm_model()
         '''
         self.model: models.LMModel = models.builders.get_lm_model(
             self.cfg).to(self.device)
@@ -181,6 +197,12 @@ class MusicGenSolver(base.StandardSolver):
             self.register_stateful('scaler')
 
     def build_dataloaders(self) -> None:
+        '''
+        建立資料
+
+        builders.get_audio_datasets()
+        '''
+
         """Instantiate audio dataloaders for each stage."""
         self.dataloaders = builders.get_audio_datasets(
             self.cfg, dataset_type=self.DATASET_TYPE)
