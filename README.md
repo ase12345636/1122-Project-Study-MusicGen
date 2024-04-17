@@ -1,6 +1,8 @@
 # 1122-Project-Study-MusicGen
 This is my bachelor project research code. This is reference Simple and Controllable Music Generation.
 
+test
+
 audiocraft/train -> ./solvers/builders -> ./solvers/musicgen ->
 
    |-> ./solvers/compression -> ./models/builders > ./models/encodec -> ./models/quantization/qt -> |
