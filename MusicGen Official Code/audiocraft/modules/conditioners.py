@@ -574,7 +574,7 @@ class ChromaStemConditioner(WaveformConditioner):
         載入 Melody Conditioner
 
         window size : 2^14
-        hop length : 2^10
+        hop length : 2^12
         '''
         self.chroma = ChromaExtractor(sample_rate=sample_rate, n_chroma=n_chroma,
                                       radix2_exp=radix2_exp, **kwargs).to(device)
@@ -665,7 +665,15 @@ class ChromaStemConditioner(WaveformConditioner):
         # avoid 0-size tensors when we are working with null conds
         if wav.shape[-1] == 1:
             return self._extract_chroma(wav)
+
+        '''
+        抓取主旋律
+        '''
         stems = self._get_stemmed_wav(wav, sample_rate)
+
+        '''
+        計算Chromagram
+        '''
         chroma = self._extract_chroma(stems)
         return chroma
 
