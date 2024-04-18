@@ -8,13 +8,13 @@ audiocraft/train -> ./solvers/builders -> ./solvers/musicgen ->
 
    |-> ./solvers/compression -> ./models/builders > ./models/encodec -> ./models/quantization/qt -> |
    |                                                                                                |
-   |                        |-> ./modules/conditioners -> ./modules/chroma --> |                    |
-   |                        |                                                  |                    |
--> |-> ./models/builders -> |-> ./modules/codebooks_patterns ----------------> |------------------> | ->
-   |                        |                                                  |                    |
-   |                        |-> ./models/lm ---------------------------------> |                    |
+   |                        |-> ./modules/conditioners -> ./modules/chroma ------------------> |    |
+   |                        |                                                                  |    |
+-> |-> ./models/builders -> |-> ./modules/codebooks_patterns --------------------------------> |--> | ->
+   |                        |                                                                  |    |
+   |                        |-> ./models/lm -> ./modules/transformer -> ./modules/streaming -> |    |
    |                                                                                                |
-   |-> ./solvers/builders -> optimizer ( haven't seen ) ------------------------------------------> |
+   |-> ./solvers/builders (dadam) ----------------------------------------------------------------> |
 
 -> ./solvers/base -> ./solvers/musicgen
 
@@ -41,6 +41,7 @@ cfg :
 
         lm model :
             dim : 1536
+            dim_feedforward : 1536*4
             num_heads : 24
             num_layers : 48
             n_q : 4

@@ -126,6 +126,8 @@ def get_lm_model(cfg: omegaconf.DictConfig) -> LMModel:
 
         '''
         載入 Transformer Decoder
+
+        models.lm.LMModel.__init__()
         '''
         lm_class = MagnetLMModel if cfg.lm_model == 'transformer_lm_magnet' else LMModel
         return lm_class(
