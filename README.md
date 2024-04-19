@@ -4,6 +4,7 @@ This is my bachelor project research code. This is reference Simple and Controll
 NOTE:
 All comments are based on Musicgen - Melody Model
 
+
 audiocraft/train -> ./solvers/builders -> ./solvers/musicgen ->
 
    |-> ./solvers/compression -> ./models/builders > ./models/encodec -> ./models/quantization/qt -> |
@@ -16,7 +17,7 @@ audiocraft/train -> ./solvers/builders -> ./solvers/musicgen ->
    |                                                                                                |
    |-> ./solvers/builders (dadam) ----------------------------------------------------------------> |
 
--> ./solvers/base -> ./solvers/musicgen
+-> ./solvers/base -> ./solvers/musicgen ->
 
 
 
@@ -34,6 +35,7 @@ cfg :
                     n_chroma : 12
                     radix2_exp : 14
                     n_eval_wavs : 100
+
             description :
                 t5 :
                     name : t5-base

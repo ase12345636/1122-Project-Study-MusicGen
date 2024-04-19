@@ -519,13 +519,19 @@ class StandardSolver(ABC, flashy.BaseSolver):
 
     def run(self):
         """Training loop."""
+
         '''
-        function 呼叫流程 :
-        run() -> run_epoch() -> train() -> common_train_valid() -> 呼叫 musicgen 的 run_step()
+        StandardSolver.should_stop_training() ->
+        StandardSolver.run_epoch() -> StandardSolver.train() -> StandardSolver.common_train_valid()
         '''
         assert len(self.state_dict()) > 0
         self.restore(replay_metrics=True)  # load checkpoint and replay history
         self.log_hyperparams(dict_from_config(self.cfg))
+
+        '''
+        每個 Epoch 先判斷是否要停止訓練
+        如果沒有則繼續訓練一個 Epoch
+        '''
         for epoch in range(self.epoch, self.cfg.optim.epochs + 1):
             if self.should_stop_training():
                 return
@@ -551,6 +557,10 @@ class StandardSolver(ABC, flashy.BaseSolver):
 
     def common_train_valid(self, dataset_split: str, **kwargs: tp.Any):
         """Common logic for train and valid stages."""
+
+        '''
+        musicgen.MusicGenSolver.run_step()
+        '''
         self.model.train(self.is_training)
 
         loader = self.dataloaders[dataset_split]

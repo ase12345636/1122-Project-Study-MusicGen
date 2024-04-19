@@ -345,12 +345,25 @@ class MusicGenSolver(base.StandardSolver):
                         # Hackingly reapplying paraphraser when using cache.
                         info.description = dataset.paraphraser.sample_paraphrase(
                             info.meta.path, info.description)
+
+        '''
+        準備 condition_tensors
+
+        melody condition :
+        conditioners.ChromaStemConditioner.tokenize() -> conditioners.WaveformConditioner.forward()
+
+        text condition :
+        conditioners.T5Conditioner.tokenize() -> conditioners.T5Conditioner.forward()
+        '''
         # prepare attributes
         attributes = [info.to_condition_attributes() for info in infos]
         attributes = self.model.cfg_dropout(attributes)
         attributes = self.model.att_dropout(attributes)
         tokenized = self.model.condition_provider.tokenize(attributes)
 
+        '''
+        準備 audio_tokens
+        '''
         # Now we should be synchronization free.
         if self.device == "cuda" and check_synchronization_points:
             torch.cuda.set_sync_debug_mode("warn")
@@ -400,8 +413,17 @@ class MusicGenSolver(base.StandardSolver):
 
     def run_step(self, idx: int, batch: tp.Tuple[torch.Tensor, tp.List[SegmentWithAttributes]], metrics: dict) -> dict:
         """Perform one training or valid step on a given batch."""
+
+        '''
+        開始訓練一個 Epoch
+        '''
         check_synchronization_points = idx == 1 and self.device == 'cuda'
 
+        '''
+        準備 Token
+
+        MusicGenSolver._prepare_tokens_and_attributes()
+        '''
         condition_tensors, audio_tokens, padding_mask = self._prepare_tokens_and_attributes(
             batch, check_synchronization_points)
 

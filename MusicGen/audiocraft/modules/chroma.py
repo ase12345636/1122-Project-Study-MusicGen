@@ -26,14 +26,15 @@ class ChromaExtractor(nn.Module):
         argmax (bool, optional): Whether to use argmax. Defaults to False.
         norm (float, optional): Norm for chroma normalization. Defaults to inf.
     """
-    '''
-        window size : 2^14
-        hop length : 2^10
-    '''
 
     def __init__(self, sample_rate: int, n_chroma: int = 12, radix2_exp: int = 12, nfft: tp.Optional[int] = None,
                  winlen: tp.Optional[int] = None, winhop: tp.Optional[int] = None, argmax: bool = False,
                  norm: float = torch.inf):
+        '''
+        window size : 2^14
+        hop length : 2^10
+        '''
+
         super().__init__()
         self.winlen = winlen or 2 ** radix2_exp
         self.nfft = nfft or self.winlen
