@@ -36,6 +36,12 @@ class MusicGenSolver(base.StandardSolver):
     DATASET_TYPE: builders.DatasetType = builders.DatasetType.MUSIC
 
     def __init__(self, cfg: omegaconf.DictConfig):
+        '''
+        繼承自 solvers.base.StandardSolver
+
+        base.StandardSolver.__init__() ->
+        MusicGenSolver.build_dataloaders() -> MusicGenSolver.build_model() -> base.StandardSolver.initialize_ema()
+        '''
         super().__init__(cfg)
         # easier access to sampling parameters
         self.generation_params = {
@@ -116,11 +122,19 @@ class MusicGenSolver(base.StandardSolver):
         return self._best_metric_name
 
     def build_model(self) -> None:
+        '''
+        建立模型架構
+        '''
+
         """Instantiate models and optimizer."""
         # we can potentially not use all quantizers with which the EnCodec model was trained
         # (e.g. we trained the model with quantizers dropout)
+
         '''
-        載入 Encodec
+        載入 Pretrained Encodec
+        ( encodec_large_nq4_s640 )
+
+        compression.CompressionSolver.wrapped_model_from_checkpoint()
         '''
         self.compression_model = CompressionSolver.wrapped_model_from_checkpoint(
             self.cfg, self.cfg.compression_model_checkpoint, device=self.device)
@@ -146,6 +160,8 @@ class MusicGenSolver(base.StandardSolver):
         # instantiate LM model
         '''
         載入 LM Model
+
+        models.builders.get_lm_model()
         '''
         self.model: models.LMModel = models.builders.get_lm_model(
             self.cfg).to(self.device)
@@ -181,6 +197,12 @@ class MusicGenSolver(base.StandardSolver):
             self.register_stateful('scaler')
 
     def build_dataloaders(self) -> None:
+        '''
+        建立資料
+
+        builders.get_audio_datasets()
+        '''
+
         """Instantiate audio dataloaders for each stage."""
         self.dataloaders = builders.get_audio_datasets(
             self.cfg, dataset_type=self.DATASET_TYPE)
@@ -251,8 +273,8 @@ class MusicGenSolver(base.StandardSolver):
         ce = torch.zeros([], device=targets.device)
         ce_per_codebook: tp.List[torch.Tensor] = []
         for k in range(K):
-            logits_k = logits[:, k, ...].contiguous(
-            ).view(-1, logits.size(-1))  # [B x T, card]
+            logits_k = logits[:, k, ...].contiguous().view(-1,
+                                                           logits.size(-1))  # [B x T, card]
             targets_k = targets[:, k, ...].contiguous().view(-1)  # [B x T]
             mask_k = mask[:, k, ...].contiguous().view(-1)  # [B x T]
             ce_targets = targets_k[mask_k]
@@ -323,12 +345,25 @@ class MusicGenSolver(base.StandardSolver):
                         # Hackingly reapplying paraphraser when using cache.
                         info.description = dataset.paraphraser.sample_paraphrase(
                             info.meta.path, info.description)
+
+        '''
+        準備 condition_tensors
+
+        melody condition :
+        conditioners.ChromaStemConditioner.tokenize() -> conditioners.WaveformConditioner.forward()
+
+        text condition :
+        conditioners.T5Conditioner.tokenize() -> conditioners.T5Conditioner.forward()
+        '''
         # prepare attributes
         attributes = [info.to_condition_attributes() for info in infos]
         attributes = self.model.cfg_dropout(attributes)
         attributes = self.model.att_dropout(attributes)
         tokenized = self.model.condition_provider.tokenize(attributes)
 
+        '''
+        準備 audio_tokens
+        '''
         # Now we should be synchronization free.
         if self.device == "cuda" and check_synchronization_points:
             torch.cuda.set_sync_debug_mode("warn")
@@ -378,8 +413,17 @@ class MusicGenSolver(base.StandardSolver):
 
     def run_step(self, idx: int, batch: tp.Tuple[torch.Tensor, tp.List[SegmentWithAttributes]], metrics: dict) -> dict:
         """Perform one training or valid step on a given batch."""
+
+        '''
+        開始訓練一個 Epoch
+        '''
         check_synchronization_points = idx == 1 and self.device == 'cuda'
 
+        '''
+        準備 Token
+
+        MusicGenSolver._prepare_tokens_and_attributes()
+        '''
         condition_tensors, audio_tokens, padding_mask = self._prepare_tokens_and_attributes(
             batch, check_synchronization_points)
 
@@ -388,6 +432,9 @@ class MusicGenSolver(base.StandardSolver):
         if check_synchronization_points:
             torch.cuda.set_sync_debug_mode('warn')
 
+        '''
+        產生機率分布
+        '''
         with self.autocast:
             model_output = self.model.compute_predictions(
                 audio_tokens, [], condition_tensors)  # type: ignore

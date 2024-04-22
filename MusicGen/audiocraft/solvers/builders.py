@@ -41,6 +41,12 @@ class DatasetType(Enum):
 
 def get_solver(cfg: omegaconf.DictConfig) -> StandardSolver:
     """Instantiate solver from config."""
+
+    '''
+    根據 config 建立並初始化 solver
+
+    musicgen.MusicGenSolver.__init__()
+    '''
     from .audiogen import AudioGenSolver
     from .compression import CompressionSolver
     from .musicgen import MusicGenSolver
@@ -98,11 +104,13 @@ def get_optimizer(params: tp.Union[nn.Module, tp.Iterable[torch.Tensor]], cfg: o
     """
     if 'optimizer' not in cfg:
         if getattr(cfg, 'optim', None) is not None:
-            raise KeyError("Optimizer not found in config. Try instantiating optimizer from cfg.optim?")
+            raise KeyError(
+                "Optimizer not found in config. Try instantiating optimizer from cfg.optim?")
         else:
             raise KeyError("Optimizer not found in config.")
 
-    parameters = get_optim_parameter_groups(params) if isinstance(params, nn.Module) else params
+    parameters = get_optim_parameter_groups(
+        params) if isinstance(params, nn.Module) else params
     optimizer: torch.optim.Optimizer
     if cfg.optimizer == 'adam':
         optimizer = torch.optim.Adam(parameters, lr=cfg.lr, **cfg.adam)
@@ -135,7 +143,8 @@ def get_lr_scheduler(optimizer: torch.optim.Optimizer,
     if cfg.lr_scheduler == 'step':
         lr_sched = torch.optim.lr_scheduler.StepLR(optimizer, **cfg.step)
     elif cfg.lr_scheduler == 'exponential':
-        lr_sched = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=cfg.exponential)
+        lr_sched = torch.optim.lr_scheduler.ExponentialLR(
+            optimizer, gamma=cfg.exponential)
     elif cfg.lr_scheduler == 'cosine':
         kwargs = dict_from_config(cfg.cosine)
         warmup_steps = kwargs.pop('warmup')
@@ -149,11 +158,13 @@ def get_lr_scheduler(optimizer: torch.optim.Optimizer,
     elif cfg.lr_scheduler == 'inverse_sqrt':
         kwargs = dict_from_config(cfg.inverse_sqrt)
         warmup_steps = kwargs.pop('warmup')
-        lr_sched = optim.InverseSquareRootLRScheduler(optimizer, warmup_steps=warmup_steps, **kwargs)
+        lr_sched = optim.InverseSquareRootLRScheduler(
+            optimizer, warmup_steps=warmup_steps, **kwargs)
     elif cfg.lr_scheduler == 'linear_warmup':
         kwargs = dict_from_config(cfg.linear_warmup)
         warmup_steps = kwargs.pop('warmup')
-        lr_sched = optim.LinearWarmupLRScheduler(optimizer, warmup_steps=warmup_steps, **kwargs)
+        lr_sched = optim.LinearWarmupLRScheduler(
+            optimizer, warmup_steps=warmup_steps, **kwargs)
     elif cfg.lr_scheduler is not None:
         raise ValueError(f"Unsupported LR Scheduler: {cfg.lr_scheduler}")
     return lr_sched
@@ -175,7 +186,8 @@ def get_ema(module_dict: nn.ModuleDict, cfg: omegaconf.DictConfig) -> tp.Optiona
     if not use:
         return None
     if len(module_dict) == 0:
-        raise ValueError("Trying to build EMA but an empty module_dict source is provided!")
+        raise ValueError(
+            "Trying to build EMA but an empty module_dict source is provided!")
     ema_module = optim.ModuleDictEMA(module_dict, decay=decay, device=device)
     return ema_module
 
@@ -221,7 +233,8 @@ def get_adversarial_losses(cfg) -> nn.ModuleDict:
     normalize = adv_cfg.get('normalize', True)
     feat_loss: tp.Optional[adversarial.FeatureMatchingLoss] = None
     if feat_loss_name:
-        assert feat_loss_name in ['l1', 'l2'], f"Feature loss only support L1 or L2 but {feat_loss_name} found."
+        assert feat_loss_name in [
+            'l1', 'l2'], f"Feature loss only support L1 or L2 but {feat_loss_name} found."
         loss = get_loss(feat_loss_name, cfg)
         feat_loss = adversarial.FeatureMatchingLoss(loss, normalize)
     loss = adversarial.get_adv_criterion(adv_loss_name)
@@ -287,6 +300,11 @@ def get_chroma_cosine_similarity(cfg: omegaconf.DictConfig) -> metrics.ChromaCos
 
 def get_audio_datasets(cfg: omegaconf.DictConfig,
                        dataset_type: DatasetType = DatasetType.AUDIO) -> tp.Dict[str, torch.utils.data.DataLoader]:
+    '''
+    讀取 config
+    建立資料
+    '''
+
     """Build AudioDataset from configuration.
 
     Args:
@@ -328,7 +346,8 @@ def get_audio_datasets(cfg: omegaconf.DictConfig,
 
         split_cfg = splits_cfg[split]
         split_kwargs = {k: v for k, v in split_cfg.items()}
-        kwargs = {**dataset_cfg, **split_kwargs}  # split kwargs overrides default dataset_cfg
+        # split kwargs overrides default dataset_cfg
+        kwargs = {**dataset_cfg, **split_kwargs}
         kwargs['sample_rate'] = sample_rate
         kwargs['channels'] = channels
 
@@ -348,7 +367,8 @@ def get_audio_datasets(cfg: omegaconf.DictConfig,
         elif dataset_type == DatasetType.SOUND:
             dataset = data.sound_dataset.SoundDataset.from_meta(path, **kwargs)
         elif dataset_type == DatasetType.AUDIO:
-            dataset = data.info_audio_dataset.InfoAudioDataset.from_meta(path, return_info=return_info, **kwargs)
+            dataset = data.info_audio_dataset.InfoAudioDataset.from_meta(
+                path, return_info=return_info, **kwargs)
         else:
             raise ValueError(f"Dataset type is unsupported: {dataset_type}")
 

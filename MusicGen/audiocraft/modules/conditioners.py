@@ -513,9 +513,23 @@ class WaveformConditioner(BaseConditioner):
         Returns:
             ConditionType: a dense vector representing the conditioning along with its mask
         """
+
+        '''
+        Forward Pass : Melody Condition -> Chromagram -> Masked Embedding
+
+        ChromaStemConditioner._get_wav_embedding() -> utils.utils.length_to_mask()
+        '''
+
+        '''
+        計算 Chromagram
+        '''
         wav, lengths, *_ = x
         with torch.no_grad():
             embeds = self._get_wav_embedding(x)
+
+        '''
+        對 Chromagram 進行線性轉換, 將dim 從 12 轉成 1536
+        '''
         embeds = embeds.to(self.output_proj.weight)
         embeds = self.output_proj(embeds)
 
@@ -662,6 +676,13 @@ class ChromaStemConditioner(WaveformConditioner):
     @torch.no_grad()
     def _compute_wav_embedding(self, wav: torch.Tensor, sample_rate: int) -> torch.Tensor:
         """Compute wav embedding, applying stem and chroma extraction."""
+
+        '''
+        計算 Chroma Embedding
+
+        ChromaStemConditioner._get_stemmed_wav() ->
+        ChromaStemConditioner._extract_chroma() -> ChromaExtractor.chroma.forward()
+        '''
         # avoid 0-size tensors when we are working with null conds
         if wav.shape[-1] == 1:
             return self._extract_chroma(wav)
@@ -707,6 +728,12 @@ class ChromaStemConditioner(WaveformConditioner):
         The conditioner will either extract the embedding on-the-fly computing it from the condition wav directly
         or will rely on the embedding cache to load the pre-computed embedding if relevant.
         """
+
+        '''
+        得到 Melody Condition 的 Embedding
+
+        ChromaStemConditioner._compute_wav_embedding()
+        '''
         sampled_wav: tp.Optional[torch.Tensor] = None
         if not self.training and self.eval_wavs is not None:
             warn_once(logger, "Using precomputed evaluation wavs!")

@@ -31,6 +31,7 @@ class CompressionSolver(base.StandardSolver):
     to train an EncodecModel (composed of an encoder-decoder and a quantizer)
     to perform high fidelity audio reconstruction.
     """
+
     def __init__(self, cfg: omegaconf.DictConfig):
         super().__init__(cfg)
         self.rng: torch.Generator  # set at each epoch
@@ -44,10 +45,12 @@ class CompressionSolver(base.StandardSolver):
                 for adv_name, _ in self.adv_losses.items():
                     loss_weights[f'{loss_name}_{adv_name}'] = weight
             elif weight > 0:
-                self.aux_losses[loss_name] = builders.get_loss(loss_name, self.cfg)
+                self.aux_losses[loss_name] = builders.get_loss(
+                    loss_name, self.cfg)
                 loss_weights[loss_name] = weight
             else:
-                self.info_losses[loss_name] = builders.get_loss(loss_name, self.cfg)
+                self.info_losses[loss_name] = builders.get_loss(
+                    loss_name, self.cfg)
         self.balancer = builders.get_balancer(loss_weights, self.cfg.balancer)
         self.register_stateful('adv_losses')
 
@@ -59,8 +62,10 @@ class CompressionSolver(base.StandardSolver):
     def build_model(self):
         """Instantiate model and optimizer."""
         # Model and optimizer
-        self.model = models.builders.get_compression_model(self.cfg).to(self.device)
-        self.optimizer = builders.get_optimizer(self.model.parameters(), self.cfg.optim)
+        self.model = models.builders.get_compression_model(
+            self.cfg).to(self.device)
+        self.optimizer = builders.get_optimizer(
+            self.model.parameters(), self.cfg.optim)
         self.register_stateful('model', 'optimizer')
         self.register_best_state('model')
         self.register_ema('model')
@@ -71,7 +76,8 @@ class CompressionSolver(base.StandardSolver):
 
     def show(self):
         """Show the compression model and employed adversarial loss."""
-        self.logger.info(f"Compression model with {self.model.quantizer.total_codebooks} codebooks:")
+        self.logger.info(
+            f"Compression model with {self.model.quantizer.total_codebooks} codebooks:")
         self.log_model_summary(self.model)
         self.logger.info("Adversarial loss:")
         self.log_model_summary(self.adv_losses)
@@ -97,7 +103,8 @@ class CompressionSolver(base.StandardSolver):
                 for adv_name, adversary in self.adv_losses.items():
                     disc_loss = adversary.train_adv(y_pred, y)
                     d_losses[f'd_{adv_name}'] = disc_loss
-                metrics['d_loss'] = torch.sum(torch.stack(list(d_losses.values())))
+                metrics['d_loss'] = torch.sum(
+                    torch.stack(list(d_losses.values())))
             metrics.update(d_losses)
 
         balanced_losses: dict = {}
@@ -105,7 +112,8 @@ class CompressionSolver(base.StandardSolver):
 
         # penalty from quantization
         if qres.penalty is not None and qres.penalty.requires_grad:
-            other_losses['penalty'] = qres.penalty  # penalty term from the quantizer
+            # penalty term from the quantizer
+            other_losses['penalty'] = qres.penalty
 
         # adversarial losses
         for adv_name, adversary in self.adv_losses.items():
@@ -164,10 +172,12 @@ class CompressionSolver(base.StandardSolver):
         metrics.update(info_losses)
 
         # aggregated GAN losses: this is useful to report adv and feat across different adversarial loss setups
-        adv_losses = [loss for loss_name, loss in metrics.items() if loss_name.startswith('adv')]
+        adv_losses = [loss for loss_name,
+                      loss in metrics.items() if loss_name.startswith('adv')]
         if len(adv_losses) > 0:
             metrics['adv'] = torch.sum(torch.stack(adv_losses))
-        feat_losses = [loss for loss_name, loss in metrics.items() if loss_name.startswith('feat')]
+        feat_losses = [loss for loss_name,
+                       loss in metrics.items() if loss_name.startswith('feat')]
         if len(feat_losses) > 0:
             metrics['feat'] = torch.sum(torch.stack(feat_losses))
 
@@ -187,7 +197,8 @@ class CompressionSolver(base.StandardSolver):
 
         loader = self.dataloaders['evaluate']
         updates = len(loader)
-        lp = self.log_progress(f'{evaluate_stage_name} inference', loader, total=updates, updates=self.log_updates)
+        lp = self.log_progress(
+            f'{evaluate_stage_name} inference', loader, total=updates, updates=self.log_updates)
         average = flashy.averager()
 
         pendings = []
@@ -200,9 +211,11 @@ class CompressionSolver(base.StandardSolver):
 
                 y_pred = qres.x.cpu()
                 y = batch.cpu()  # should already be on CPU but just in case
-                pendings.append(pool.submit(evaluate_audio_reconstruction, y_pred, y, self.cfg))
+                pendings.append(pool.submit(
+                    evaluate_audio_reconstruction, y_pred, y, self.cfg))
 
-            metrics_lp = self.log_progress(f'{evaluate_stage_name} metrics', pendings, updates=self.log_updates)
+            metrics_lp = self.log_progress(
+                f'{evaluate_stage_name} metrics', pendings, updates=self.log_updates)
             for pending in metrics_lp:
                 metrics = pending.result()
                 metrics = average(metrics)
@@ -213,12 +226,14 @@ class CompressionSolver(base.StandardSolver):
     def generate(self):
         """Generate stage."""
         self.model.eval()
-        sample_manager = SampleManager(self.xp, map_reference_to_sample_id=True)
+        sample_manager = SampleManager(
+            self.xp, map_reference_to_sample_id=True)
         generate_stage_name = str(self.current_stage)
 
         loader = self.dataloaders['generate']
         updates = len(loader)
-        lp = self.log_progress(generate_stage_name, loader, total=updates, updates=self.log_updates)
+        lp = self.log_progress(generate_stage_name, loader,
+                               total=updates, updates=self.log_updates)
 
         for batch in lp:
             reference, _ = batch
@@ -229,7 +244,8 @@ class CompressionSolver(base.StandardSolver):
 
             reference = reference.cpu()
             estimate = qres.x.cpu()
-            sample_manager.add_samples(estimate, self.epoch, ground_truth_wavs=reference)
+            sample_manager.add_samples(
+                estimate, self.epoch, ground_truth_wavs=reference)
 
         flashy.distrib.barrier()
 
@@ -283,14 +299,17 @@ class CompressionSolver(base.StandardSolver):
             name = checkpoint_path.split('/', 3)[-1]
             return models.CompressionModel.get_pretrained(name, device)
         logger = logging.getLogger(__name__)
-        logger.info(f"Loading compression model from checkpoint: {checkpoint_path}")
-        _checkpoint_path = checkpoint.resolve_checkpoint_path(checkpoint_path, use_fsdp=False)
+        logger.info(
+            f"Loading compression model from checkpoint: {checkpoint_path}")
+        _checkpoint_path = checkpoint.resolve_checkpoint_path(
+            checkpoint_path, use_fsdp=False)
         assert _checkpoint_path is not None, f"Could not resolve compression model checkpoint path: {checkpoint_path}"
         state = checkpoint.load_checkpoint(_checkpoint_path)
         assert state is not None and 'xp.cfg' in state, f"Could not load compression model from ckpt: {checkpoint_path}"
         cfg = state['xp.cfg']
         cfg.device = device
-        compression_model = models.builders.get_compression_model(cfg).to(device)
+        compression_model = models.builders.get_compression_model(
+            cfg).to(device)
         assert compression_model.sample_rate == cfg.sample_rate, "Compression model sample rate should match"
 
         assert 'best_state' in state and state['best_state'] != {}
@@ -304,6 +323,12 @@ class CompressionSolver(base.StandardSolver):
     def wrapped_model_from_checkpoint(cfg: omegaconf.DictConfig,
                                       checkpoint_path: tp.Union[Path, str],
                                       device: tp.Union[torch.device, str] = 'cpu') -> models.CompressionModel:
+        '''
+        根據 config 讀入對應版本的 Encodec Pretrained Model
+
+        CompressionSolver.model_from_checkpoint() -> builders.get_wrapped_compression_model()
+        '''
+
         """Instantiate a wrapped CompressionModel from a given checkpoint path or dora sig.
 
         Args:
@@ -312,8 +337,10 @@ class CompressionSolver(base.StandardSolver):
             use_ema (bool): Use EMA variant of the model instead of the actual model.
             device (torch.device or str): Device on which the model is loaded.
         """
-        compression_model = CompressionSolver.model_from_checkpoint(checkpoint_path, device)
-        compression_model = models.builders.get_wrapped_compression_model(compression_model, cfg)
+        compression_model = CompressionSolver.model_from_checkpoint(
+            checkpoint_path, device)
+        compression_model = models.builders.get_wrapped_compression_model(
+            compression_model, cfg)
         return compression_model
 
 

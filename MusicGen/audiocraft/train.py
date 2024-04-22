@@ -42,7 +42,8 @@ def get_solver(cfg):
     cfg.dataset.batch_size //= flashy.distrib.world_size()
     for split in ['train', 'valid', 'evaluate', 'generate']:
         if hasattr(cfg.dataset, split) and hasattr(cfg.dataset[split], 'batch_size'):
-            assert cfg.dataset[split].batch_size % flashy.distrib.world_size() == 0
+            assert cfg.dataset[split].batch_size % flashy.distrib.world_size(
+            ) == 0
             cfg.dataset[split].batch_size //= flashy.distrib.world_size()
     resolve_config_dset_paths(cfg)
     solver = solvers.get_solver(cfg)
@@ -73,7 +74,8 @@ def get_solver_from_xp(xp: XP, override_cfg: tp.Optional[tp.Union[dict, omegacon
                 f"Overrides used: {xp.argv}")
     cfg = xp.cfg
     if override_cfg is not None:
-        cfg = omegaconf.OmegaConf.merge(cfg, omegaconf.DictConfig(override_cfg))
+        cfg = omegaconf.OmegaConf.merge(
+            cfg, omegaconf.DictConfig(override_cfg))
     if disable_fsdp and cfg.fsdp.use:
         cfg.fsdp.use = False
         assert load_best is True
@@ -88,7 +90,8 @@ def get_solver_from_xp(xp: XP, override_cfg: tp.Optional[tp.Union[dict, omegacon
         with xp.enter():
             solver = get_solver(cfg)
             if restore:
-                solver.restore(load_best=load_best, ignore_state_keys=ignore_state_keys)
+                solver.restore(load_best=load_best,
+                               ignore_state_keys=ignore_state_keys)
         return solver
     finally:
         hydra.core.global_hydra.GlobalHydra.instance().clear()
@@ -119,7 +122,8 @@ def init_seed_and_system(cfg):
     os.environ['OMP_NUM_THREADS'] = str(cfg.num_threads)
     logger.debug('Setting num threads to %d', cfg.num_threads)
     set_efficient_attention_backend(cfg.efficient_attention_backend)
-    logger.debug('Setting efficient attention backend to %s', cfg.efficient_attention_backend)
+    logger.debug('Setting efficient attention backend to %s',
+                 cfg.efficient_attention_backend)
     if 'SLURM_JOB_ID' in os.environ:
         tmpdir = Path('/scratch/slurm_tmpdir/' + os.environ['SLURM_JOB_ID'])
         if tmpdir.exists():
@@ -133,10 +137,19 @@ def main(cfg):
 
     # Setup logging both to XP specific folder, and to stderr.
     log_name = '%s.log.{rank}' % cfg.execute_only if cfg.execute_only else 'solver.log.{rank}'
-    flashy.setup_logging(level=str(cfg.logging.level).upper(), log_name=log_name)
+    flashy.setup_logging(
+        level=str(cfg.logging.level).upper(), log_name=log_name)
     # Initialize distributed training, no need to specify anything when using Dora.
     flashy.distrib.init()
+
+    '''
+    根據 config 檔拿到相關參數
+    讀入 solver
+
+    builders.get_solver()
+    '''
     solver = get_solver(cfg)
+
     if cfg.show:
         solver.show()
         return
@@ -149,6 +162,11 @@ def main(cfg):
         solver.run_one_stage(cfg.execute_only)
         return
 
+    '''
+    開始 training
+
+    base.StandardSolver.run()
+    '''
     return solver.run()
 
 

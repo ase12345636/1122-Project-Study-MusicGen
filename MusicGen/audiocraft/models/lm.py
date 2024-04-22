@@ -143,9 +143,6 @@ class LMModel(StreamingModule):
         two_step_cfg (bool): Whether to run classifier free-guidance with 2 distinct steps.
         **kwargs: Additional parameters for the transformer encoder.
     """
-    '''
-    設定 LM 架構及參數
-    '''
 
     def __init__(self, pattern_provider: CodebooksPatternProvider, condition_provider: ConditioningProvider,
                  fuser: ConditionFuser, n_q: int = 8, card: int = 1024, dim: int = 128, num_heads: int = 8,
@@ -155,6 +152,9 @@ class LMModel(StreamingModule):
                  zero_bias_init: bool = False, cfg_dropout: float = 0, cfg_coef: float = 1.0,
                  attribute_dropout: tp.Dict[str, tp.Dict[str, float]] = {}, two_step_cfg: bool = False,
                  **kwargs):
+        '''
+        設定 LM 架構及參數
+        '''
         super().__init__()
         self.cfg_coef = cfg_coef
         self.cfg_dropout = ClassifierFreeGuidanceDropout(p=cfg_dropout)
@@ -167,14 +167,22 @@ class LMModel(StreamingModule):
         self.dim = dim
         self.pattern_provider = pattern_provider
         self.two_step_cfg = two_step_cfg
+
         '''
-        由於 Encodec 的 output 是 2048 dim; lm 的 input 是 1536 dim,
-        所以需要在做 Embedding 的時候需要對 dim 做轉換
+        由於 Encodec 的 Codebook 是 2048 dim; lm 的 input 是 1536 dim,
+        所以需要做 Embedding, 對 dim 做轉換
         '''
         self.emb = nn.ModuleList(
             [ScaledEmbedding(embed_dim, dim, lr=emb_lr) for _ in range(n_q)])
         if 'activation' in kwargs:
             kwargs['activation'] = get_activation_fn(kwargs['activation'])
+
+        '''
+        建立 Transformer Decoder
+
+        modules.transformer.StreamingTransformer.__init__() ->
+        modules.transformer.StreamingTransformer.create_norm_fn() -> LMModel._init_weights()
+        '''
         self.transformer = StreamingTransformer(
             d_model=dim, num_heads=num_heads, dim_feedforward=int(
                 hidden_scale * dim),

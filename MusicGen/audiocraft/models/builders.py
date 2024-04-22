@@ -86,8 +86,11 @@ def get_compression_model(cfg: omegaconf.DictConfig) -> CompressionModel:
 
 def get_lm_model(cfg: omegaconf.DictConfig) -> LMModel:
     """Instantiate a transformer LM."""
+
     '''
     載入 LM Model
+
+    get_conditioner_provider() -> get_codebooks_pattern_provider() -> lm.LMModel.__init__()
     '''
     if cfg.lm_model in ['transformer_lm', 'transformer_lm_magnet']:
         kwargs = dict_from_config(getattr(cfg, 'transformer_lm'))
@@ -123,6 +126,8 @@ def get_lm_model(cfg: omegaconf.DictConfig) -> LMModel:
 
         '''
         載入 Transformer Decoder
+
+        models.lm.LMModel.__init__()
         '''
         lm_class = MagnetLMModel if cfg.lm_model == 'transformer_lm_magnet' else LMModel
         return lm_class(
@@ -151,6 +156,10 @@ def get_conditioner_provider(output_dim: int, cfg: omegaconf.DictConfig) -> Cond
     condition_provider_args.pop('merge_text_conditions_p', None)
     condition_provider_args.pop('drop_desc_p', None)
 
+    '''
+    根據 config 讀入對應的 Conditioner
+    ( chroma_stem, T5 Conditioner )
+    '''
     for cond, cond_cfg in dict_cfg.items():
         model_type = cond_cfg['model']
         model_args = cond_cfg[model_type]
@@ -192,6 +201,13 @@ def get_condition_fuser(cfg: omegaconf.DictConfig) -> ConditionFuser:
 
 def get_codebooks_pattern_provider(n_q: int, cfg: omegaconf.DictConfig) -> CodebooksPatternProvider:
     """Instantiate a codebooks pattern provider object."""
+
+    '''
+    載入 Encodec 的 Codebooks
+    
+    n_q : 4
+    modeling: delay
+    '''
     pattern_providers = {
         'parallel': ParallelPatternProvider,
         'delay': DelayedPatternProvider,
