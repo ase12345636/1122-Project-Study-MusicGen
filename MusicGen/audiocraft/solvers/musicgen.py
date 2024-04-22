@@ -273,8 +273,8 @@ class MusicGenSolver(base.StandardSolver):
         ce = torch.zeros([], device=targets.device)
         ce_per_codebook: tp.List[torch.Tensor] = []
         for k in range(K):
-            logits_k = logits[:, k, ...].contiguous(
-            ).view(-1, logits.size(-1))  # [B x T, card]
+            logits_k = logits[:, k, ...].contiguous().view(-1,
+                                                           logits.size(-1))  # [B x T, card]
             targets_k = targets[:, k, ...].contiguous().view(-1)  # [B x T]
             mask_k = mask[:, k, ...].contiguous().view(-1)  # [B x T]
             ce_targets = targets_k[mask_k]
@@ -432,6 +432,9 @@ class MusicGenSolver(base.StandardSolver):
         if check_synchronization_points:
             torch.cuda.set_sync_debug_mode('warn')
 
+        '''
+        產生機率分布
+        '''
         with self.autocast:
             model_output = self.model.compute_predictions(
                 audio_tokens, [], condition_tensors)  # type: ignore
