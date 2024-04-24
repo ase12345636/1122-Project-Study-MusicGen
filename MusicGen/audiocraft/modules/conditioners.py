@@ -452,8 +452,8 @@ class T5Conditioner(TextConditioner):
         if self.word_dropout > 0. and self.training:
             new_entries = []
             for entry in entries:
-                words = [word for word in entry.split(
-                    " ") if random.random() >= self.word_dropout]
+                words = [word for word in entry.split(" ")
+                         if random.random() >= self.word_dropout]
                 new_entries.append(" ".join(words))
             entries = new_entries
 

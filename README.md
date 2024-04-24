@@ -40,6 +40,7 @@ cfg :
                 t5 :
                     name : t5-base
                     word_dropout : 0.2
+                    out_dim : 768
 
         lm model :
             dim : 1536
