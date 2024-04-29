@@ -169,7 +169,7 @@ class LMModel(StreamingModule):
         self.two_step_cfg = two_step_cfg
 
         '''
-        由於 Encodec 的 Codebook 是 2048 dim; lm 的 input 是 1536 dim,
+        由於 lm 的 input 是 1536 dim,
         所以需要做 Embedding, 對 dim 做轉換
         '''
         self.emb = nn.ModuleList(
