@@ -1,13 +1,9 @@
 import torch
+from torch import Tensor
 import torch.nn as nn
-import torch.optim as optim
-import torch.utils.data as data
-import math
-import copy
-
-import torch
-from torch import nn, Tensor
 from torch.nn import TransformerEncoder, TransformerEncoderLayer, TransformerDecoder, TransformerDecoderLayer
+import torch.optim as optim
+import math
 
 
 class Encoder(nn.Module):
@@ -17,7 +13,7 @@ class Encoder(nn.Module):
         super().__init__()
         self.pos_encoder = PositionalEncoding(d_model, dropout)
         encoder_layers = TransformerEncoderLayer(
-            d_model, nhead, d_hid, dropout)
+            d_model, nhead, d_hid, dropout, batch_first=True)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayer)
         self.embedding = nn.Embedding(ntoken, d_model)
         self.d_model = d_model
@@ -50,7 +46,7 @@ class Decoder(nn.Module):
         super().__init__()
         self.pos_encoder = PositionalEncoding(d_model, dropout)
         decoder_layers = TransformerDecoderLayer(
-            d_model, nhead, d_hid, dropout)
+            d_model, nhead, d_hid, dropout, batch_first=True)
         self.transformer_decoder = TransformerDecoder(decoder_layers, nlayer)
         self.embedding = nn.Embedding(ntoken, d_model)
         self.d_model = d_model
@@ -123,23 +119,22 @@ class TransformerModel(nn.Module):
         return output
 
 
-ntoken = 5000
+ntoken = 2048
 d_model = 512
 nheads = 8
 nlayer = 6
 d_hid = 2048
 dropout = 0.1
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda')
 
 transformer = TransformerModel(
     ntoken, d_model, nheads, nlayer, d_hid, dropout)
 transformer.to(device)
 
 # Generate random sample data
-# (batch_size, seq_length)
+# (seq_length, batch_size)
 src_data = torch.randint(1, ntoken, (64, 100)).to(device)
-# (batch_size, seq_length)
 tgt_data = torch.randint(1, ntoken, (64, 100)).to(device)
 
 criterion = nn.CrossEntropyLoss(ignore_index=0)
@@ -148,7 +143,7 @@ optimizer = optim.Adam(transformer.parameters(),
 
 transformer.train()
 
-for epoch in range(10):
+for epoch in range(100):
     optimizer.zero_grad()
     output = transformer(src_data, tgt_data)
     loss = criterion(output.contiguous().view(-1, ntoken),
@@ -160,9 +155,8 @@ for epoch in range(10):
 transformer.eval()
 
 # Generate random sample validation data
-# (batch_size, seq_length)
+# (seq_length, batch_size)
 val_src_data = torch.randint(1, ntoken, (64, 100)).to(device)
-# (batch_size, seq_length)
 val_tgt_data = torch.randint(1, ntoken, (64, 100)).to(device)
 
 with torch.no_grad():
