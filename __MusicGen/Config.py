@@ -1,3 +1,8 @@
+import torch
+
+
+device = torch.device('cuda')
+
 ntoken = 2048
 d_model = 512
 nheads = 8

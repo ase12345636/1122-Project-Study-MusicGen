@@ -3,7 +3,6 @@ import math
 
 from torch import Tensor
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
-
 from Absolute_Positional_Encoding import PositionalEncoding
 
 
@@ -13,11 +12,13 @@ class Encoder(nn.Module):
                  nlayer: int, dropout: float = 0.5):
         super().__init__()
         self.pos_encoder = PositionalEncoding(d_model, dropout)
+
         encoder_layers = TransformerEncoderLayer(
             d_model, nhead, d_hid, dropout, batch_first=True)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayer)
-        self.embedding = nn.Embedding(ntoken, d_model)
+
         self.d_model = d_model
+        self.embedding = nn.Embedding(ntoken, d_model)
 
         self.init_weights()
 

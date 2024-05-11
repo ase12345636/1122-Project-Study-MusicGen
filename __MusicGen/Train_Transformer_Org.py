@@ -4,19 +4,16 @@ import torch
 from LM_Model import LM_Model
 from Loss_Function import Loss_Function
 from Optimizer import Optimizer
-from Config import ntoken, d_model, nheads, nlayer, d_hid, dropout, ignore_index, lr, betas, eps, PATH
+from Config import device, ntoken, d_model, nheads, nlayer, d_hid, dropout, ignore_index, lr, betas, eps, PATH
 
-
-device = torch.device('cuda')
 
 transformer = LM_Model(
-    ntoken, d_model, nheads, nlayer, d_hid, dropout).to(device)
+    ntoken, ntoken, d_model, nheads, nlayer, d_hid, dropout).to(device)
 
 criterion = Loss_Function(ignore_index)
 optimizer = Optimizer(transformer, lr, betas, eps)
 
-# Generate random sample data
-# (seq_length, batch_size)
+
 src_data = torch.randint(1, ntoken, (64, 100)).to(device)
 tgt_data = torch.randint(1, ntoken, (64, 100)).to(device)
 
