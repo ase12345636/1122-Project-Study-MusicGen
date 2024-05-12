@@ -69,3 +69,12 @@ cfg :
             warmup: 4000
             lr_min_ratio: 0.0
             cycle_length: 1.0
+
+
+
+
+text conditioner:
+audiocraft/modules/conditioners.T5Conditioner
+
+delay pattern:
+audiocraft\modules\codebooks_patterns.py.DelayedPatternProvider
