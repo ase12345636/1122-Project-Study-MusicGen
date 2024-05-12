@@ -9,9 +9,9 @@ from Absolute_Positional_Encoding import PositionalEncoding
 class Decoder(nn.Module):
 
     def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
-                 nlayer: int, dropout: float = 0.5):
+                 nlayer: int, dropout: float = 0.5, max_length: int = 1000):
         super().__init__()
-        self.pos_encoder = PositionalEncoding(d_model, dropout)
+        self.pos_encoder = PositionalEncoding(d_model, dropout, max_length)
         decoder_layers = TransformerDecoderLayer(
             d_model, nhead, d_hid, dropout, batch_first=True)
         self.transformer_decoder = TransformerDecoder(decoder_layers, nlayer)
