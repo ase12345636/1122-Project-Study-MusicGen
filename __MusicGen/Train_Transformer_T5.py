@@ -1,10 +1,10 @@
 import torch
 
 
-from LM_Model_T5 import LM_Model_T5
-from Loss_Function import Loss_Function
-from Optimizer import Optimizer
-from Config import device, ntoken, d_model, nheads, nlayer, d_hid, dropout, ignore_index, lr, betas, eps, PATH, text_condition_max_length, melody_condition_max_length, word_dropout
+from MusicGen_Model.LM_Model.LM_Model_T5 import LM_Model_T5
+from MusicGen_Model.Optimizer.Loss_Function import Loss_Function
+from MusicGen_Model.Optimizer.Optimizer import Optimizer
+from Config.Config import device, ntoken, d_model, nheads, nlayer, d_hid, dropout, ignore_index, lr, betas, eps, PATH, text_condition_max_length, melody_condition_max_length, word_dropout
 
 
 transformer = LM_Model_T5(

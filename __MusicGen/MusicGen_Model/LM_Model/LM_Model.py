@@ -1,8 +1,8 @@
 import torch.nn as nn
 
 
-from Encoder import Encoder
-from Decoder import Decoder
+from ..Encoder_Model.Encoder import Encoder
+from ..Decoder_Model.Decoder import Decoder
 
 
 class LM_Model(nn.Module):

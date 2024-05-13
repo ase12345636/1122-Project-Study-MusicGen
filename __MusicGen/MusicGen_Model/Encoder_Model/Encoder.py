@@ -3,7 +3,7 @@ import math
 
 from torch import Tensor
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
-from Absolute_Positional_Encoding import PositionalEncoding
+from ..Positional_Encoding.Absolute_Positional_Encoding import PositionalEncoding
 
 
 class Encoder(nn.Module):
