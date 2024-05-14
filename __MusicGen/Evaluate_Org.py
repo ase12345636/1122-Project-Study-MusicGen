@@ -1,8 +1,8 @@
 import torch
 
-from LM_Model import LM_Model
-from Loss_Function import Loss_Function
-from Config import ntoken, d_model, nheads, nlayer, d_hid, dropout, ignore_index, PATH
+from MusicGen_Model.LM_Model.LM_Model import LM_Model
+from MusicGen_Model.Optimizer.Loss_Function import Loss_Function
+from Config.Config import ntoken, d_model, nheads, nlayer, d_hid, dropout, ignore_index, PATH
 
 
 device = torch.device('cuda')
