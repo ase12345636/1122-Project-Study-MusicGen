@@ -1,5 +1,5 @@
+import torch
 import torchaudio
-
 from transformers import EncodecModel, AutoProcessor
 
 
@@ -15,7 +15,7 @@ class Compressor():
 
     def compress(self, file_path: str):
         audio, _ = torchaudio.load(file_path)
-        audio = self.resampler((audio[0]+audio[1])/2)
+        audio = torch.mean(audio, dim=0)
 
         input = self.processor(
             audio, sampling_rate=32000, return_tensors="pt")
