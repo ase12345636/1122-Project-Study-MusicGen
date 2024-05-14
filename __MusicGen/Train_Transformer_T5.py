@@ -15,9 +15,9 @@ transformer = LM_Model_T5(
 criterion = Loss_Function(ignore_index)
 optimizer = Optimizer(transformer, lr, betas, eps)
 
-src_data = ["This music clip is of a male vocalist doing a beat box. The tempo is medium fast with the vocalist imitating the digital drums, turntable and Dj mixer to a perfection. This vocal percussion is youthful and engaging.",
+src_data = [["This music clip is of a male vocalist doing a beat box. The tempo is medium fast with the vocalist imitating the digital drums, turntable and Dj mixer to a perfection. This vocal percussion is youthful and engaging.",
             "This music clip is of a male vocalist doing a beat box. The tempo is medium fast with the vocalist imitating the digital drums, turntable and Dj mixer to a perfection. This vocal percussion is rhythmic",
-            "This music clip is of a male vocalist doing a beat box. The tempo is medium fast with the vocalist imitating the digital drums, turntable and Dj mixer to a perfection."]
+             "This music clip is of a male vocalist doing a beat box. The tempo is medium fast with the vocalist imitating the digital drums, turntable and Dj mixer to a perfection."]]
 tgt_data = torch.randint(1, ntoken, (3, 2000))
 
 

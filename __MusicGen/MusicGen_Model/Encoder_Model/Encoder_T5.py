@@ -31,8 +31,24 @@ class Encoder_T5(nn.Module):
         self.linear.weight.data.uniform_(-initrange, initrange)
 
     def tokenize(self, text_condition: list[str]):
+        # text_condition_ids = self.t5_tokenizer(
+        #     text_condition, return_tensors="pt"
+        # ).input_ids
+
+        # new_text_condition_ids = []
+        # for example in text_condition_ids:
+        #     temp_text_condition_ids = []
+        #     for token_id in example:
+        #         if random.random() >= 0.0:
+        #             temp_text_condition_ids.append(token_id)
+        #     for index in range(self.max_length-len(temp_text_condition_ids)):
+        #         temp_text_condition_ids.append(0)
+        #     new_text_condition_ids.append(temp_text_condition_ids)
+        # text_condition_ids = torch.IntTensor(new_text_condition_ids)
+        # return text_condition_ids
+
         text_condition_ids = []
-        for example in text_condition:
+        for example in text_condition[0]:
             temp_text_condition_ids = self.t5_tokenizer(
                 example, return_tensors="pt"
             ).input_ids

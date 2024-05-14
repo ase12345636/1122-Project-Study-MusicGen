@@ -15,7 +15,10 @@ class Decoder_CodeBookPattern(nn.Module):
         decoder_layers = TransformerDecoderLayer(
             d_model, nhead, d_hid, dropout, batch_first=True)
         self.transformer_decoder = TransformerDecoder(decoder_layers, nlayer)
-        self.embedding = nn.Embedding(ntoken, d_model)
+        self.embedding_1 = nn.Embedding(ntoken, d_model)
+        self.embedding_2 = nn.Embedding(ntoken, d_model)
+        self.embedding_3 = nn.Embedding(ntoken, d_model)
+        self.embedding_4 = nn.Embedding(ntoken, d_model)
         self.d_model = d_model
         self.linear_code_book_1 = nn.Linear(d_model, ntoken)
         self.linear_code_book_2 = nn.Linear(d_model, ntoken)
@@ -26,7 +29,10 @@ class Decoder_CodeBookPattern(nn.Module):
 
     def init_weights(self) -> None:
         initrange = 0.1
-        self.embedding.weight.data.uniform_(-initrange, initrange)
+        self.embedding_1.weight.data.uniform_(-initrange, initrange)
+        self.embedding_2.weight.data.uniform_(-initrange, initrange)
+        self.embedding_3.weight.data.uniform_(-initrange, initrange)
+        self.embedding_4.weight.data.uniform_(-initrange, initrange)
         self.linear_code_book_1.bias.data.zero_()
         self.linear_code_book_1.weight.data.uniform_(-initrange, initrange)
         self.linear_code_book_2.bias.data.zero_()
@@ -45,7 +51,9 @@ class Decoder_CodeBookPattern(nn.Module):
         Returns:
             output Tensor of shape ``[seq_len, batch_size, ntoken]``
         """
-        src = self.embedding(src) * math.sqrt(self.d_model)
+        src = (self.embedding_1(src[:, 0])+self.embedding_2(src[:, 1])
+               + self.embedding_3(src[:, 2])+self.embedding_4(src[:, 3]))
+        src *= math.sqrt(self.d_model)
         src = self.pos_encoder(src)
         if src_mask is None:
             """Generate a square causal mask for the sequence. The masked positions are filled with float('-inf').
