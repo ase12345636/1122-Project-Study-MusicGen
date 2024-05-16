@@ -1,6 +1,6 @@
 import torch
 
-
+from torchsummary import summary
 from MusicGen_Model.LM_Model.LM_Model_T5 import LM_Model_T5
 from MusicGen_Model.Optimizer.Loss_Function import Loss_Function
 from MusicGen_Model.Optimizer.Optimizer import Optimizer
@@ -18,16 +18,14 @@ optimizer = Optimizer(transformer, lr, betas, eps)
 src_data = [["This music clip is of a male vocalist doing a beat box. The tempo is medium fast with the vocalist imitating the digital drums, turntable and Dj mixer to a perfection. This vocal percussion is youthful and engaging.",
             "This music clip is of a male vocalist doing a beat box. The tempo is medium fast with the vocalist imitating the digital drums, turntable and Dj mixer to a perfection. This vocal percussion is rhythmic",
              "This music clip is of a male vocalist doing a beat box. The tempo is medium fast with the vocalist imitating the digital drums, turntable and Dj mixer to a perfection."]]
-tgt_data = torch.randint(1, ntoken, (3, 2000))
-
-
-transformer.train()
+tgt_data = torch.randint(1, ntoken, (3, 1001))
+summary(transformer)
 
 for epoch in range(10):
     optimizer.zero_grad()
-    output = transformer(src_data, tgt_data[:, :1000])
+    output = transformer(src_data, tgt_data[:, :-1])
     loss = criterion(output.contiguous().view(-1, ntoken),
-                     tgt_data[:, 1000:].contiguous().view(-1))
+                     tgt_data[:, 1:].contiguous().view(-1))
     loss.backward()
     optimizer.step()
     print(f"Epoch: {epoch+1}, Loss: {loss.item()}")

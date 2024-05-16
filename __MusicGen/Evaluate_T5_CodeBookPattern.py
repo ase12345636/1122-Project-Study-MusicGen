@@ -1,6 +1,11 @@
 import torch
 
-from torchsummary import summary
+from MusicGen_Model.LM_Model.LM_Model import LM_Model
+from MusicGen_Model.Optimizer.Loss_Function import Loss_Function
+from Config.Config import ntoken, d_model, nheads, nlayer, d_hid, dropout, ignore_index, PATH
+
+import torch
+
 from MusicGen_Model.Compresion_Model.Compressor import Compressor
 from MusicGen_Model.LM_Model.LM_Model_T5_CodeBookPattern import LM_Model_T5_CodeBookPattern
 from MusicGen_Model.Optimizer.Loss_Function import Loss_Function
@@ -15,29 +20,9 @@ transformer = LM_Model_T5_CodeBookPattern(
     d_model=d_model, nhead=nheads, nlayer=nlayer, d_hid=d_hid, dropout=dropout,
     text_condotion_max_length=text_condition_max_length, melody_condition_max_length=melody_condition_max_length)
 
-criterion = Loss_Function(ignore_index)
-optimizer = Optimizer(transformer, lr, betas, eps)
-
 encoder_input = [[["A male vocalist sings this passionate song. The tempo is slow with emphatic vocals and an acoustic guitar accompaniment. The song is melodic, emotional,sentimental, passionate,pensive, reflective and deep. This song is Alternative Rock."]]]
-tgt_data = compressor.compress(
-    "D:\\Project\\MachineLearning\\__MusicGen\Dataset\\Music_1.wav")
-summary(transformer)
 
-transformer.train()
+transformer.load_state_dict(torch.load(PATH))
 
-for epoch in range(300):
-    for batch in range(1):
-        optimizer.zero_grad()
-        output = transformer(
-            encoder_input[batch], tgt_data[batch, :, :, :-1])
-        print(output.shape)
-
-        loss = 0
-        for codebook in range(4):
-            loss += criterion(output[:, codebook, :].contiguous().view(-1, ntoken-1),
-                              tgt_data[batch, :, codebook, 1:].contiguous().view(-1))
-        loss.backward()
-        optimizer.step()
-        print(f"Epoch: {epoch+1}, Loss: {loss.item()}")
-
-torch.save(transformer.state_dict(), PATH)
+output = transformer.generation(encoder_input)
+compressor.decompress(output)

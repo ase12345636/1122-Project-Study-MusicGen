@@ -21,7 +21,7 @@ class Encoder_T5(nn.Module):
 
         self.t5_tokenizer = AutoTokenizer.from_pretrained("google-t5/t5-small")
         self.t5_encoder = T5EncoderModel.from_pretrained(
-            "google-t5/t5-small").train(mode=finetune)  # .to(torch.device("cuda"))
+            "google-t5/t5-small").train(mode=False)  # .to(torch.device("cuda"))
 
         self.linear = nn.Linear(512, d_model)
 
