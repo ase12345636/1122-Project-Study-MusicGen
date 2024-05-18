@@ -3,6 +3,7 @@ import torch.nn as nn
 
 from torch.distributions import Categorical
 from ..DecoderModel.Decoder_ParallelPattern import Decoder_ParallelPattern
+from Config.Config import top_k, temperature
 
 
 class MusicGen_ParallelPattern(nn.Module):
@@ -73,9 +74,9 @@ class MusicGen_ParallelPattern(nn.Module):
             prediction = torch.IntTensor([])
             for codebook in range(4):
                 logit, indices = torch.topk(
-                    output_logit[:, codebook, -1, :], 250)
+                    output_logit[:, codebook, -1, :], top_k)
                 logit = Categorical(
-                    logit / 1.0).sample()
+                    logit / temperature).sample()
                 indices = torch.reshape(indices[:, logit], (1, 1))
                 prediction = torch.cat((prediction, indices), 1)
 

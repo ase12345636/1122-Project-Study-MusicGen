@@ -22,3 +22,6 @@ betas = (0.9, 0.98)
 eps = 1e-9
 
 PATH = "./ModelSave/model.h5"
+
+top_k = 250
+temperature = 1.0

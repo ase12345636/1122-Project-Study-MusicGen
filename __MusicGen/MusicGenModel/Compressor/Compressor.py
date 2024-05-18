@@ -66,10 +66,9 @@ class Compressor():
         # Return
         return tgt_input
 
-    def decompress(self, input):
-        # with torch.no_grad():
+    def decompress(self, input, file_path: str):
         audio_values = self.encodec.decode(input, [None])[0]
         audio_values = torch.reshape(
             audio_values, (1, -1)).to(torch.float32)
         torchaudio.save(
-            "output.wav", audio_values, 32000, format="wav")
+            file_path, audio_values, 32000, format="wav")
