@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 from torch.distributions import Categorical
-from ..DecoderModel.Decoder_ParallelPattern import Decoder_ParallelPattern
+from ..DecoderModel.Decoder import Decoder
 from Config.Config import top_k, temperature
 
 
@@ -17,7 +17,7 @@ class MusicGen_ParallelPattern(nn.Module):
         # Initialize
         self.melody_condition_max_length = melody_condition_max_length
 
-        self.decoder = Decoder_ParallelPattern(
+        self.decoder = Decoder(
             ntoken=tgt_ntoken, d_model=d_model, nhead=nhead, d_hid=d_hid, nlayer=nlayer,
             dropout=dropout, max_length=melody_condition_max_length)
 

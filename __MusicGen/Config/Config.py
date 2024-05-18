@@ -8,7 +8,9 @@ melody_condition_max_length = 500
 
 word_dropout = 0.2
 
-ntoken = 2049
+parallel_pattern_ntoken = 2049
+delay_pattern_ntoken = 2050
+
 d_model = 512
 nheads = 8
 nlayer = 10

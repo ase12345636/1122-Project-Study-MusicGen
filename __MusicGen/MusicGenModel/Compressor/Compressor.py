@@ -20,7 +20,7 @@ class Compressor():
             "facebook/encodec_32khz")
         self.encodec = EncodecModel.from_pretrained("facebook/encodec_32khz")
 
-    def compress(self, file_path: list[str]):
+    def compress(self, file_path: list[str], mode: str = "Parallel"):
         '''
         Input : file_path
             A batch of audio file path
@@ -28,10 +28,10 @@ class Compressor():
             shape : [audio file path]
 
 
-    ->  Token : text_condition_ids
+    ->  Codebook Embedding : codebook_index
             A batch of token id
 
-            shape : [batch size, length]
+            shape : [batch, batch size, codebook, length]
 
     ->  Output : tgt_input
             A batch of tgt output
@@ -55,11 +55,52 @@ class Compressor():
             codebook_index = self.encodec.encode(
                 audio["input_values"], audio["padding_mask"]).audio_codes
 
-            # Add SOS token
-            sos = torch.tensor(
-                [[[[2048], [2048], [2048], [2048]]]], dtype=torch.int)
-            codebook_index = torch.cat(
-                (sos, codebook_index[:, :, :, :self.max_length]), 3)
+            # Proccess parallel pattern
+            if mode == "Parallel":
+
+                # Add SOS token
+                sos = torch.IntTensor(
+                    [[[[2048], [2048], [2048], [2048]]]])
+
+                # Concat encodec embedding with SOS token
+                codebook_index = torch.cat(
+                    (sos, codebook_index[:, :, :, :self.max_length]), 3)
+
+            elif mode == "Delay":
+
+                # Add SOS token and SP token
+                new_codebook_index = None
+
+                #  Concat Concat encodec embedding with SP token
+                for codebook in range(4):
+
+                    # Proccess with each codebook embedding
+                    # Add SP token in front of codebook embedding
+                    temp_codebook_index = codebook_index[:, :, codebook, :]
+                    for i in range(codebook):
+                        temp_codebook_index = torch.cat(
+                            (torch.IntTensor([[[2049]]]), temp_codebook_index), 2)
+
+                    # Add SP token behind codebook embedding
+                    for i in range(3-codebook):
+                        temp_codebook_index = torch.cat(
+                            (temp_codebook_index, torch.IntTensor([[[2049]]])), 2)
+
+                    if new_codebook_index == None:
+                        new_codebook_index = temp_codebook_index
+
+                    else:
+                        new_codebook_index = torch.cat(
+                            (new_codebook_index, temp_codebook_index), 1)
+
+                # Add SOS token in front of codebook embedding
+                codebook_index = torch.reshape(
+                    new_codebook_index, (1, 1, 4, -1))
+
+                sos = torch.IntTensor(
+                    [[[[2048], [2048], [2048], [2048]]]])
+                codebook_index = torch.cat(
+                    (sos, codebook_index[:, :, :, :self.max_length+3]), 3)
 
             tgt_input = torch.cat((tgt_input, codebook_index), 1)
 

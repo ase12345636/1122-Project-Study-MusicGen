@@ -6,12 +6,12 @@ from torchsummary import summary
 from MusicGenModel.MusicGen.MusicGen_ParallelPattern import MusicGen_ParallelPattern
 from MusicGenModel.Optimizer.Loss_Function import Loss_Function
 from MusicGenModel.Optimizer.Optimizer import Optimizer
-from Config.Config import device, ntoken, d_model, nheads, nlayer, d_hid, dropout, ignore_index, lr, betas, eps, PATH, melody_condition_max_length
+from Config.Config import device, parallel_pattern_ntoken, d_model, nheads, nlayer, d_hid, dropout, ignore_index, lr, betas, eps, PATH, melody_condition_max_length
 
 
 # Load model
 transformer = MusicGen_ParallelPattern(
-    tgt_ntoken=ntoken,
+    tgt_ntoken=parallel_pattern_ntoken,
     d_model=d_model,
     nhead=nheads,
     nlayer=nlayer,
@@ -55,7 +55,7 @@ for epoch in range(1000):
             loss = 0.0
             for example in range(len(prediction)):
                 for codebook in range(4):
-                    loss += criterion(prediction[example, codebook, :, :].contiguous().view(-1, ntoken-1),
+                    loss += criterion(prediction[example, codebook, :, :].contiguous().view(-1, parallel_pattern_ntoken-1),
                                       tgt_gt[example, codebook, :].contiguous().view(-1))
 
         # Update parameters

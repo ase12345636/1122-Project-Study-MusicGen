@@ -20,6 +20,7 @@ t5 = Encoder_T5(finetune=False,
 
 text_folder_path = "Dataset\\OriginalData\\json\\train\\"
 text_dirs = os.listdir(text_folder_path)
+text_dirs.sort()
 
 # For each batch
 mem_data = None
@@ -44,7 +45,6 @@ for batch in range(3):
     else:
         mem_data = torch.cat((mem_data, text_data), 0)
 
-print(mem_data.shape)
 
 # Save data
 torch.save(mem_data, 'Dataset\\PreproccessedData\\train\\mem.pt')
@@ -60,6 +60,7 @@ compressor = Compressor(max_length=melody_condition_max_length)
 
 audio_folder_path = "Dataset\\OriginalData\\music\\train\\"
 audio_dirs = os.listdir(audio_folder_path)
+audio_dirs.sort()
 
 # For each batch
 tgt_data = None
@@ -74,15 +75,13 @@ for batch in range(3):
 
     # Convert to tgt input
     audio_path = [audio_path]
-    audio_data = compressor.compress(audio_path)
+    audio_data = compressor.compress(audio_path, mode="Delay")
 
     if tgt_data == None:
         tgt_data = audio_data
 
     else:
         tgt_data = torch.cat((tgt_data, audio_data), 0)
-
-print(tgt_data.shape)
 
 # Save data
 torch.save(tgt_data, 'Dataset\\PreproccessedData\\train\\tgt.pt')
