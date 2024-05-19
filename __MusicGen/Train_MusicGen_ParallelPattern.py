@@ -37,7 +37,7 @@ transformer.train()
 
 # For each eopch
 iteration = 0
-for epoch in range(500):
+for epoch in range(10):
 
     # For each batch
     for batch in range(len(tgt_data)):

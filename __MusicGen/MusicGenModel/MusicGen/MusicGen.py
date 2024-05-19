@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from torch.distributions import Categorical
 from ..DecoderModel.Decoder import Decoder
-from Config.Config import top_k, temperature, SOS_token
+from Config.Config import device, top_k, temperature, SOS_token
 
 
 class MusicGen(nn.Module):
@@ -42,7 +42,7 @@ class MusicGen(nn.Module):
         prediction = self.decoder(tgt, mem)
         return prediction
 
-    def generation(self, src, length: int = 500):
+    def generation(self, src):
         '''
         Input : tgt
             A batch of Decoder input
@@ -62,16 +62,16 @@ class MusicGen(nn.Module):
 
         # Add SOS token
         tgt = torch.IntTensor(
-            [[[SOS_token], [SOS_token], [SOS_token], [SOS_token]]])
+            [[[SOS_token], [SOS_token], [SOS_token], [SOS_token]]]).to(device)
 
         # Autoregressively generate next token
-        for step in range(1, length):
+        for step in range(1, self.melody_condition_max_length+1):
             output_logit = self.decoder(
                 tgt, src, "generation")
 
             # Top k sample
             # k = 250, temperature = 1.0
-            prediction = torch.IntTensor([])
+            prediction = torch.IntTensor([]).to(device)
             for codebook in range(4):
                 logit, indices = torch.topk(
                     output_logit[:, codebook, -1, :], top_k)

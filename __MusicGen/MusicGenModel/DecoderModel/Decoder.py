@@ -66,7 +66,7 @@ class Decoder(nn.Module):
         self.linear_code_book_4.bias.data.zero_()
         self.linear_code_book_4.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self,  tgt: Tensor, mem: Tensor, status: str = "train") -> Tensor:
+    def forward(self,  tgt: Tensor, mem: Tensor, status: str = "train"):
         '''
         Input : tgt
             A batch of Decoder input

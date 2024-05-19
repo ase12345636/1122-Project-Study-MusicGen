@@ -10,6 +10,7 @@ word_dropout = 0.2
 
 parallel_pattern_ntoken = 2049
 delay_pattern_ntoken = 2050
+
 output_ntoken = 2048
 
 SOS_token = 2048

@@ -36,7 +36,6 @@ class Encoder_T5(nn.Module):
 
             shape : [batch size]
 
-
     ->  Token : text_condition_ids
             A batch of token id
 

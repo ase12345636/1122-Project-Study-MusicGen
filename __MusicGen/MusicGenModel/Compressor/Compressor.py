@@ -1,7 +1,7 @@
 import torch
 import torchaudio
 from transformers import EncodecModel, AutoProcessor
-from Config.Config import SOS_token, SP_token, melody_condition_max_length
+from Config.Config import device, SOS_token, SP_token, melody_condition_max_length
 
 
 class Compressor():
@@ -9,7 +9,8 @@ class Compressor():
     Class for compress/ decompress audio
     '''
 
-    def __init__(self, src_sample_rate: int = 48000, tgt_sample_rate: int = 32000, max_length: int = 250, mode: str = "Delay"):
+    def __init__(self, src_sample_rate: int = 48000, tgt_sample_rate: int = 32000, max_length: int = 250,
+                 mode: str = "Delay"):
         # Initialize
         super().__init__()
         self.max_length = max_length
@@ -18,7 +19,8 @@ class Compressor():
             src_sample_rate, tgt_sample_rate)
         self.processor = AutoProcessor.from_pretrained(
             "facebook/encodec_32khz")
-        self.encodec = EncodecModel.from_pretrained("facebook/encodec_32khz")
+        self.encodec = EncodecModel.from_pretrained(
+            "facebook/encodec_32khz")
 
         self.mode = mode
 
@@ -28,7 +30,6 @@ class Compressor():
             A batch of audio file path
 
             shape : [audio file path]
-
 
     ->  Codebook Embedding : codebook_index
             A batch of token id
@@ -136,11 +137,12 @@ class Compressor():
         return tgt_input
 
     def decompress(self, input, file_path: str):
+        self.encodec = self.encodec.to(device)
 
         if self.mode == "Parallel":
             audio_values = self.encodec.decode(input, [None])[0]
             audio_values = torch.reshape(
-                audio_values, (1, -1)).to(torch.float32)
+                audio_values, (1, -1)).to(torch.float32).cpu()
 
             torchaudio.save(
                 file_path, audio_values, 32000, format="wav")
@@ -163,7 +165,7 @@ class Compressor():
 
             audio_values = self.encodec.decode(input, [None])[0]
             audio_values = torch.reshape(
-                audio_values, (1, -1)).to(torch.float32)
+                audio_values, (1, -1)).to(torch.float32).cpu()
 
             torchaudio.save(
                 file_path, audio_values, 32000, format="wav")
