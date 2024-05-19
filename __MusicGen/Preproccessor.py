@@ -8,7 +8,7 @@ from MusicGenModel.Compressor.Compressor import Compressor
 from Config.Config import text_condition_max_length, word_dropout, melody_condition_max_length
 
 
-dir = ["train", "validation", "test"]
+dir = [["train", 35, 100], ["validation", 1, 835], ["test", 1, 1084]]
 
 '''
 mem input :
@@ -21,18 +21,18 @@ t5 = Encoder_T5(finetune=False,
                 max_length=text_condition_max_length)
 
 for dataset in dir:
-    text_folder_path = "Dataset\\OriginalData\\json\\"+dataset+"\\"
+    text_folder_path = "Dataset\\OriginalData\\json\\"+dataset[0]+"\\"
     text_dirs = os.listdir(text_folder_path)
     text_dirs.sort()
 
     # For each batch
     mem_data = None
     num = 0
-    for batch in range(2):
+    for batch in range(dataset[1]):
 
         # For each example
         text_path = []
-        for example in range(2):
+        for example in range(dataset[2]):
             json_file_path = text_folder_path+text_dirs[num]
             json_data = json.load(open(json_file_path))
             text_path.append(json_data["caption"])
@@ -50,7 +50,7 @@ for dataset in dir:
 
     # Save data
     torch.save(mem_data,
-               "Dataset\\PreproccessedData\\"+dataset+"\\MemData\\mem.pt")
+               "Dataset\\PreproccessedData\\"+dataset[0]+"\\MemData\\mem.pt")
 
 
 '''
@@ -67,18 +67,18 @@ compressor = Compressor(
     max_length=melody_condition_max_length, mode="Delay")
 
 for dataset in dir:
-    audio_folder_path = "Dataset\\OriginalData\\music\\"+dataset+"\\"
+    audio_folder_path = "Dataset\\OriginalData\\music\\"+dataset[0]+"\\"
     audio_dirs = os.listdir(audio_folder_path)
     audio_dirs.sort()
 
     # For each batch
     tgt_data = None
     num = 0
-    for batch in range(2):
+    for batch in range(dataset[1]):
 
         # For each example
         audio_path = []
-        for example in range(2):
+        for example in range(dataset[2]):
             audio_path.append(audio_folder_path+audio_dirs[num])
             num += 1
 
@@ -95,7 +95,7 @@ for dataset in dir:
     # Save data
     torch.save(
         tgt_data,
-        "Dataset\\PreproccessedData\\"+dataset+"\\TgtData\\DelayPattern\\DelayTgt.pt")
+        "Dataset\\PreproccessedData\\"+dataset[0]+"\\TgtData\\DelayPattern\\DelayTgt.pt")
 
 
 '''
@@ -112,18 +112,18 @@ compressor = Compressor(
     max_length=melody_condition_max_length, mode="Parallel")
 
 for dataset in dir:
-    audio_folder_path = "Dataset\\OriginalData\\music\\"+dataset+"\\"
+    audio_folder_path = "Dataset\\OriginalData\\music\\"+dataset[0]+"\\"
     audio_dirs = os.listdir(audio_folder_path)
     audio_dirs.sort()
 
     # For each batch
     tgt_data = None
     num = 0
-    for batch in range(2):
+    for batch in range(dataset[1]):
 
         # For each example
         audio_path = []
-        for example in range(2):
+        for example in range(dataset[2]):
             audio_path.append(audio_folder_path+audio_dirs[num])
             num += 1
 
@@ -140,4 +140,4 @@ for dataset in dir:
     # Save data
     torch.save(
         tgt_data,
-        "Dataset\\PreproccessedData\\"+dataset+"\\TgtData\\ParallelPattern\\ParallelTgt.pt")
+        "Dataset\\PreproccessedData\\"+dataset[0]+"\\TgtData\\ParallelPattern\\ParallelTgt.pt")
