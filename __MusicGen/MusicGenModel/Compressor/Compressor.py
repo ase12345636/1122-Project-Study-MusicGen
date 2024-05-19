@@ -9,7 +9,7 @@ class Compressor():
     Class for compress/ decompress audio
     '''
 
-    def __init__(self, src_sample_rate: int = 48000, tgt_sample_rate: int = 32000, max_length: int = 250, mode: str = "Parallel"):
+    def __init__(self, src_sample_rate: int = 48000, tgt_sample_rate: int = 32000, max_length: int = 250, mode: str = "Delay"):
         # Initialize
         super().__init__()
         self.max_length = max_length
