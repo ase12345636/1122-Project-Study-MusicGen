@@ -3,14 +3,16 @@ import torch
 from torch.cuda.amp import autocast as autocast
 
 from torchsummary import summary
-from MusicGenModel.MusicGen.MusicGen_ParallelPattern import MusicGen_ParallelPattern
+from MusicGenModel.MusicGen.MusicGen import MusicGen
 from MusicGenModel.Optimizer.Loss_Function import Loss_Function
 from MusicGenModel.Optimizer.Optimizer import Optimizer
-from Config.Config import device, parallel_pattern_ntoken, d_model, nheads, nlayer, d_hid, dropout, ignore_index, lr, betas, eps, PATH, melody_condition_max_length
+from Config.Config import device, parallel_pattern_ntoken, d_model, nheads, nlayer, d_hid, dropout, lr, betas, eps, PATH, melody_condition_max_length
 
+
+mode = "Parallel"
 
 # Load model
-transformer = MusicGen_ParallelPattern(
+transformer = MusicGen(
     tgt_ntoken=parallel_pattern_ntoken,
     d_model=d_model,
     nhead=nheads,
@@ -21,14 +23,13 @@ transformer = MusicGen_ParallelPattern(
 # transformer.load_state_dict(torch.load(PATH))
 summary(transformer)
 
-# Load loss function and optimizer
-criterion = Loss_Function(ignore_index)
+# Load optimizer
 optimizer = Optimizer(transformer, lr, betas, eps)
 
 # Load data
-mem_data = torch.load('Dataset\\PreproccessedData\\train\\mem.pt',
+mem_data = torch.load('Dataset\\PreproccessedData\\train\\MemData\\mem.pt',
                       map_location=device, weights_only=True)
-tgt_data = torch.load('Dataset\\PreproccessedData\\train\\tgt.pt',
+tgt_data = torch.load('Dataset\\PreproccessedData\\train\\TgtData\\'+mode+'Pattern\\'+mode+'Tgt.pt',
                       map_location=device, weights_only=True)
 
 # Start training
@@ -36,7 +37,7 @@ transformer.train()
 
 # For each eopch
 iteration = 0
-for epoch in range(1000):
+for epoch in range(500):
 
     # For each batch
     for batch in range(len(tgt_data)):
@@ -52,14 +53,10 @@ for epoch in range(1000):
                 mem, tgt)
 
             # Compute loss with 4 codebooks
-            loss = 0.0
-            for example in range(len(prediction)):
-                for codebook in range(4):
-                    loss += criterion(prediction[example, codebook, :, :].contiguous().view(-1, parallel_pattern_ntoken-1),
-                                      tgt_gt[example, codebook, :].contiguous().view(-1))
+            loss = Loss_Function(prediction=prediction,
+                                 tgt_gt=tgt_gt, mode=mode)
 
         # Update parameters
-        loss /= float(len(prediction))
         loss.backward()
 
         optimizer.step()
@@ -68,4 +65,4 @@ for epoch in range(1000):
         print(f"Iteration: {iteration}, Loss: {loss.item()}")
 
 # Save model
-torch.save(transformer.state_dict(), PATH)
+torch.save(transformer.state_dict(), PATH+"ParallelModel.h5")

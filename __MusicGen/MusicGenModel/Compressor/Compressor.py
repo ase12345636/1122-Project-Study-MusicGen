@@ -1,7 +1,7 @@
 import torch
 import torchaudio
 from transformers import EncodecModel, AutoProcessor
-from Config.Config import device
+from Config.Config import SOS_token, SP_token, melody_condition_max_length
 
 
 class Compressor():
@@ -9,7 +9,7 @@ class Compressor():
     Class for compress/ decompress audio
     '''
 
-    def __init__(self, src_sample_rate: int = 48000, tgt_sample_rate: int = 32000, max_length: int = 250):
+    def __init__(self, src_sample_rate: int = 48000, tgt_sample_rate: int = 32000, max_length: int = 250, mode: str = "Parallel"):
         # Initialize
         super().__init__()
         self.max_length = max_length
@@ -20,7 +20,9 @@ class Compressor():
             "facebook/encodec_32khz")
         self.encodec = EncodecModel.from_pretrained("facebook/encodec_32khz")
 
-    def compress(self, file_path: list[str], mode: str = "Parallel"):
+        self.mode = mode
+
+    def compress(self, file_path: list[str]):
         '''
         Input : file_path
             A batch of audio file path
@@ -55,18 +57,42 @@ class Compressor():
             codebook_index = self.encodec.encode(
                 audio["input_values"], audio["padding_mask"]).audio_codes
 
+            '''
+            Parallel Pattern Mode :
+
+                SOS Token : SOS_token
+
+                Output Content :
+                [[SOS_token, x, x, x, ......],
+                 [SOS_token, x, x, x, ......],
+                 [SOS_token, x, x, x, ......],
+                 [SOS_token, x, x, x, ......]]
+            '''
             # Proccess parallel pattern
-            if mode == "Parallel":
+            if self.mode == "Parallel":
 
                 # Add SOS token
                 sos = torch.IntTensor(
-                    [[[[2048], [2048], [2048], [2048]]]])
+                    [[[[SOS_token], [SOS_token], [SOS_token], [SOS_token]]]])
 
                 # Concat encodec embedding with SOS token
                 codebook_index = torch.cat(
                     (sos, codebook_index[:, :, :, :self.max_length]), 3)
 
-            elif mode == "Delay":
+            '''
+            Parallel Delay Mode :
+
+                SOS Token : SOS_token
+                SP Token : SP_token
+
+                Output Content :
+                [[SOS_token, x,               x,        x, ......, SP_token, SP_token, SP_token],
+                 [SOS_token, SP_token,        x,        x, ......,        x, SP_token, SP_token],
+                 [SOS_token, SP_token, SP_token,        x, ......,        x,        x, SP_token],
+                 [SOS_token, SP_token, SP_token, SP_token, ......,        x,        x,        x]]
+            '''
+            # Proccess delay pattern
+            if self.mode == "Delay":
 
                 # Add SOS token and SP token
                 new_codebook_index = None
@@ -76,15 +102,17 @@ class Compressor():
 
                     # Proccess with each codebook embedding
                     # Add SP token in front of codebook embedding
-                    temp_codebook_index = codebook_index[:, :, codebook, :]
+                    temp_codebook_index = codebook_index[:, :,
+                                                         codebook, :self.max_length]
+
                     for i in range(codebook):
                         temp_codebook_index = torch.cat(
-                            (torch.IntTensor([[[2049]]]), temp_codebook_index), 2)
+                            (torch.IntTensor([[[SP_token]]]), temp_codebook_index), 2)
 
                     # Add SP token behind codebook embedding
                     for i in range(3-codebook):
                         temp_codebook_index = torch.cat(
-                            (temp_codebook_index, torch.IntTensor([[[2049]]])), 2)
+                            (temp_codebook_index, torch.IntTensor([[[SP_token]]])), 2)
 
                     if new_codebook_index == None:
                         new_codebook_index = temp_codebook_index
@@ -98,7 +126,7 @@ class Compressor():
                     new_codebook_index, (1, 1, 4, -1))
 
                 sos = torch.IntTensor(
-                    [[[[2048], [2048], [2048], [2048]]]])
+                    [[[[SOS_token], [SOS_token], [SOS_token], [SOS_token]]]])
                 codebook_index = torch.cat(
                     (sos, codebook_index[:, :, :, :self.max_length+3]), 3)
 
@@ -108,8 +136,34 @@ class Compressor():
         return tgt_input
 
     def decompress(self, input, file_path: str):
-        audio_values = self.encodec.decode(input, [None])[0]
-        audio_values = torch.reshape(
-            audio_values, (1, -1)).to(torch.float32)
-        torchaudio.save(
-            file_path, audio_values, 32000, format="wav")
+
+        if self.mode == "Parallel":
+            audio_values = self.encodec.decode(input, [None])[0]
+            audio_values = torch.reshape(
+                audio_values, (1, -1)).to(torch.float32)
+
+            torchaudio.save(
+                file_path, audio_values, 32000, format="wav")
+
+        if self.mode == "Delay":
+
+            new_input = None
+            for codebook in range(4):
+                # Skip SP Token
+                temp_input = input[0, 0, codebook, codebook:]
+                temp_input = temp_input[:melody_condition_max_length]
+
+                if new_input == None:
+                    new_input = torch.reshape(
+                        temp_input, (1, 1, 1, melody_condition_max_length))
+
+                else:
+                    new_input = torch.cat((new_input, torch.reshape(
+                        temp_input, (1, 1, 1, melody_condition_max_length))), 2)
+
+            audio_values = self.encodec.decode(input, [None])[0]
+            audio_values = torch.reshape(
+                audio_values, (1, -1)).to(torch.float32)
+
+            torchaudio.save(
+                file_path, audio_values, 32000, format="wav")

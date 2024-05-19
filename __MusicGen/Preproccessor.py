@@ -47,8 +47,12 @@ for batch in range(3):
 
 
 # Save data
-torch.save(mem_data, 'Dataset\\PreproccessedData\\train\\mem.pt')
+torch.save(mem_data, 'Dataset\\PreproccessedData\\train\\MemData\\mem.pt')
 
+
+'''
+Delay Pattren
+'''
 
 '''
 tgt input :
@@ -56,7 +60,8 @@ tgt input :
 '''
 
 # Prepare tgt input source
-compressor = Compressor(max_length=melody_condition_max_length)
+compressor = Compressor(
+    max_length=melody_condition_max_length, mode="Delay")
 
 audio_folder_path = "Dataset\\OriginalData\\music\\train\\"
 audio_dirs = os.listdir(audio_folder_path)
@@ -75,7 +80,7 @@ for batch in range(3):
 
     # Convert to tgt input
     audio_path = [audio_path]
-    audio_data = compressor.compress(audio_path, mode="Delay")
+    audio_data = compressor.compress(audio_path)
 
     if tgt_data == None:
         tgt_data = audio_data
@@ -84,4 +89,48 @@ for batch in range(3):
         tgt_data = torch.cat((tgt_data, audio_data), 0)
 
 # Save data
-torch.save(tgt_data, 'Dataset\\PreproccessedData\\train\\tgt.pt')
+torch.save(
+    tgt_data, 'Dataset\\PreproccessedData\\train\\TgtData\\DelayPattern\\DelayTgt.pt')
+
+
+'''
+Parallel Pattren
+'''
+
+'''
+tgt input :
+    shape : [batch, batch size, length, codebook]
+'''
+
+# Prepare tgt input source
+compressor = Compressor(
+    max_length=melody_condition_max_length, mode="Parallel")
+
+audio_folder_path = "Dataset\\OriginalData\\music\\train\\"
+audio_dirs = os.listdir(audio_folder_path)
+audio_dirs.sort()
+
+# For each batch
+tgt_data = None
+num = 0
+for batch in range(3):
+
+    # For each example
+    audio_path = []
+    for example in range(3):
+        audio_path.append(audio_folder_path+audio_dirs[num])
+        num += 1
+
+    # Convert to tgt input
+    audio_path = [audio_path]
+    audio_data = compressor.compress(audio_path)
+
+    if tgt_data == None:
+        tgt_data = audio_data
+
+    else:
+        tgt_data = torch.cat((tgt_data, audio_data), 0)
+
+# Save data
+torch.save(
+    tgt_data, 'Dataset\\PreproccessedData\\train\\TgtData\\ParallelPattern\\ParallelTgt.pt')

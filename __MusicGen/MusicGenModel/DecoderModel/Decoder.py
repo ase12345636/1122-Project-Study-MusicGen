@@ -5,6 +5,7 @@ import math
 from torch import Tensor
 from torch.nn import TransformerDecoder, TransformerDecoderLayer
 from ..PositionalEncoding.Absolute_Positional_Encoding import PositionalEncoding
+from Config.Config import output_ntoken
 
 
 class Decoder(nn.Module):
@@ -35,10 +36,10 @@ class Decoder(nn.Module):
 
         self.linear_decoder = nn.Linear(d_model, d_model)
 
-        self.linear_code_book_1 = nn.Linear(d_model, self.ntoken-1)
-        self.linear_code_book_2 = nn.Linear(d_model, self.ntoken-1)
-        self.linear_code_book_3 = nn.Linear(d_model, self.ntoken-1)
-        self.linear_code_book_4 = nn.Linear(d_model, self.ntoken-1)
+        self.linear_code_book_1 = nn.Linear(d_model, output_ntoken)
+        self.linear_code_book_2 = nn.Linear(d_model, output_ntoken)
+        self.linear_code_book_3 = nn.Linear(d_model, output_ntoken)
+        self.linear_code_book_4 = nn.Linear(d_model, output_ntoken)
 
         self.init_weights()
 
@@ -117,13 +118,13 @@ class Decoder(nn.Module):
         if status == "train":
             # Compute probbaility distrobute of each codebooks
             output_code_book_1 = torch.reshape(self.linear_code_book_1(
-                decoder_output), (-1, 1, self.max_length, self.ntoken-1))
+                decoder_output), (-1, 1, self.max_length, output_ntoken))
             output_code_book_2 = torch.reshape(self.linear_code_book_2(
-                decoder_output), (-1, 1, self.max_length, self.ntoken-1))
+                decoder_output), (-1, 1, self.max_length, output_ntoken))
             output_code_book_3 = torch.reshape(self.linear_code_book_3(
-                decoder_output), (-1, 1, self.max_length, self.ntoken-1))
+                decoder_output), (-1, 1, self.max_length, output_ntoken))
             output_code_book_4 = torch.reshape(self.linear_code_book_4(
-                decoder_output), (-1, 1, self.max_length, self.ntoken-1))
+                decoder_output), (-1, 1, self.max_length, output_ntoken))
 
             # Concat each distrobute of codebooks and return
             return torch.cat((output_code_book_1, output_code_book_2, output_code_book_3, output_code_book_4), 1)
@@ -132,13 +133,13 @@ class Decoder(nn.Module):
             # Compute probbaility distrobute of each codebooks
             # Take last tokenprobbaility distrobute
             prediction_code_book_1 = torch.reshape(nn.functional.softmax(self.linear_code_book_1(
-                decoder_output)[:, -1, :], 1), (1, 1, 1, self.ntoken-1))
+                decoder_output)[:, -1, :], 1), (1, 1, 1, output_ntoken))
             prediction_code_book_2 = torch.reshape(nn.functional.softmax(self.linear_code_book_2(
-                decoder_output)[:, -1, :], 1), (1, 1, 1, self.ntoken-1))
+                decoder_output)[:, -1, :], 1), (1, 1, 1, output_ntoken))
             prediction_code_book_3 = torch.reshape(nn.functional.softmax(self.linear_code_book_3(
-                decoder_output)[:, -1, :], 1), (1, 1, 1, self.ntoken-1))
+                decoder_output)[:, -1, :], 1), (1, 1, 1, output_ntoken))
             prediction_code_book_4 = torch.reshape(nn.functional.softmax(self.linear_code_book_4(
-                decoder_output)[:, -1, :], 1), (1, 1, 1, self.ntoken-1))
+                decoder_output)[:, -1, :], 1), (1, 1, 1, output_ntoken))
 
             # Concat each distrobute of codebooks and return
             return torch.cat((prediction_code_book_1, prediction_code_book_2, prediction_code_book_3, prediction_code_book_4), 1)
