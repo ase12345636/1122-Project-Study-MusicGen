@@ -6,20 +6,20 @@ from torchsummary import summary
 from MusicGenModel.MusicGen.MusicGen import MusicGen
 from MusicGenModel.Optimizer.Loss_Function import Loss_Function
 from MusicGenModel.Optimizer.Optimizer import Optimizer
-from Config.Config import device, parallel_pattern_ntoken, d_model, nheads, nlayer, d_hid, dropout, lr, betas, eps, PATH, melody_condition_max_length
+from Config.Config import device, delay_pattern_ntoken, d_model, nheads, nlayer, d_hid, dropout, lr, betas, eps, PATH, melody_condition_max_length
 
 
-mode = "Parallel"
+mode = "Delay"
 
 # Load model
 transformer = MusicGen(
-    tgt_ntoken=parallel_pattern_ntoken,
+    tgt_ntoken=delay_pattern_ntoken,
     d_model=d_model,
     nhead=nheads,
     nlayer=nlayer,
     d_hid=d_hid,
     dropout=dropout,
-    melody_condition_max_length=melody_condition_max_length).to(device)
+    melody_condition_max_length=melody_condition_max_length+3).to(device)
 # transformer.load_state_dict(torch.load(PATH))
 summary(transformer)
 
@@ -54,7 +54,9 @@ for epoch in range(10):
 
             # Compute loss with 4 codebooks
             loss = Loss_Function(prediction=prediction,
-                                 tgt_gt=tgt_gt, mode=mode)
+                                 tgt_gt=tgt_gt,
+                                 max_length=melody_condition_max_length,
+                                 mode=mode)
 
         # Update parameters
         loss.backward()
@@ -65,4 +67,4 @@ for epoch in range(10):
         print(f"Iteration: {iteration}, Loss: {loss.item()}")
 
 # Save model
-torch.save(transformer.state_dict(), PATH+"ParallelModel.h5")
+torch.save(transformer.state_dict(), PATH+"DelayModel.h5")
