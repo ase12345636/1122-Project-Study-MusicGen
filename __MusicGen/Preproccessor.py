@@ -5,10 +5,8 @@ import torch
 
 from MusicGenModel.EncoderModel.Encoder_T5 import Encoder_T5
 from MusicGenModel.Compressor.Compressor import Compressor
-from Config.Config import text_condition_max_length, word_dropout, melody_condition_max_length
-
-
-dir = [["train", 35, 100], ["validation", 1, 835], ["test", 1, 1084]]
+from Config.Config import dir
+from Config.Config import word_dropout, text_condition_max_length, melody_condition_max_length
 
 '''
 mem input :
