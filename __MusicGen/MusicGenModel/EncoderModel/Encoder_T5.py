@@ -17,8 +17,9 @@ class Encoder_T5(nn.Module):
 
     def __init__(self, finetune: bool,
                  word_dropout: float = 0., max_length: int = 100):
-        # Initialize
         super().__init__()
+
+        # Initialize
         self.finetune = finetune
 
         self.word_dropout = word_dropout

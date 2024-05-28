@@ -5,14 +5,19 @@ from Config.Config import output_ntoken
 
 
 def Loss_Function(prediction: torch.tensor, tgt_gt: torch.tensor, max_length: int = 250, mode: str = "Delay"):
+    '''
+    Function for compute loss
+    '''
 
+    # Loss function : cross entropy
     criterion = nn.CrossEntropyLoss()
 
-    # Compute loss with 4 codebooks
     loss = 0.0
 
+    # Compute loss with each example
     for example in range(len(prediction)):
 
+        # Compute loss with each codebook
         for codebook in range(4):
 
             # Compute loss with parallel mode

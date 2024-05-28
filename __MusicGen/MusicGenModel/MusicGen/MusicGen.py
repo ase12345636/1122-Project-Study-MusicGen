@@ -3,17 +3,18 @@ import torch.nn as nn
 
 from torch.distributions import Categorical
 from ..DecoderModel.Decoder import Decoder
-from Config.Config import device, top_k, temperature, SOS_token
+from Config.Config import device, top_k, temperature, SOS_token, SP_token, guidance_scale
 
 
 class MusicGen(nn.Module):
     '''
-    Class for generation audio with delay pattern
+    Class for generation audio
     '''
 
     def __init__(self, tgt_ntoken: int, d_model: int, nhead: int, nlayer: int, d_hid: int, dropout: int,
                  melody_condition_max_length: int = 500):
         super(MusicGen, self).__init__()
+
         # Initialize
         self.melody_condition_max_length = melody_condition_max_length
 
@@ -40,9 +41,12 @@ class MusicGen(nn.Module):
         '''
 
         prediction = self.decoder(tgt, mem)
+
+        # print(prediction.shape)
+
         return prediction
 
-    def generation(self, src):
+    def generation(self, mem, mode="Delay"):
         '''
         Input : tgt
             A batch of Decoder input
@@ -64,10 +68,18 @@ class MusicGen(nn.Module):
         tgt = torch.IntTensor(
             [[[SOS_token], [SOS_token], [SOS_token], [SOS_token]]]).to(device)
 
+        mem_null = torch.zeros(mem.shape).to(device)
+
         # Autoregressively generate next token
         for step in range(1, self.melody_condition_max_length+1):
-            output_logit = self.decoder(
-                tgt, src, "generation")
+
+            # Classifier-free guidance
+            output_logit_text = self.decoder(
+                tgt, mem, "generation")*(1.0-guidance_scale)
+            output_logit_null = self.decoder(
+                tgt, mem_null, "generation")*guidance_scale
+
+            output_logit = output_logit_text+output_logit_null
 
             # Top k sample
             # k = 250, temperature = 1.0
@@ -77,7 +89,14 @@ class MusicGen(nn.Module):
                     output_logit[:, codebook, -1, :], top_k)
                 logit = Categorical(
                     logit / temperature).sample()
-                indices = torch.reshape(indices[:, logit], (1, 1))
+
+                if mode == "Delay" and ((tgt.size(2) >= 1 and tgt.size(2) < 1+codebook) or
+                                        (tgt.size(2) > self.melody_condition_max_length-(3-codebook))):
+                    indices = torch.IntTensor([[SP_token]]).to(device)
+
+                else:
+                    indices = torch.reshape(indices[:, logit], (1, 1))
+
                 prediction = torch.cat((prediction, indices), 1)
 
             # Put new token behind the tgt

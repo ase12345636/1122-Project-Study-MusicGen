@@ -11,8 +11,9 @@ class Compressor():
 
     def __init__(self, src_sample_rate: int = 48000, tgt_sample_rate: int = 32000, max_length: int = 250,
                  mode: str = "Delay"):
-        # Initialize
         super().__init__()
+
+        # Initialize
         self.max_length = max_length
 
         self.resampler = torchaudio.transforms.Resample(
@@ -163,7 +164,7 @@ class Compressor():
                     new_input = torch.cat((new_input, torch.reshape(
                         temp_input, (1, 1, 1, melody_condition_max_length))), 2)
 
-            audio_values = self.encodec.decode(input, [None])[0]
+            audio_values = self.encodec.decode(new_input, [None])[0]
             audio_values = torch.reshape(
                 audio_values, (1, -1)).to(torch.float32).cpu()
 

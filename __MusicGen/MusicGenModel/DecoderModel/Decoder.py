@@ -15,8 +15,9 @@ class Decoder(nn.Module):
 
     def __init__(self, ntoken: int, d_model: int, nhead: int, d_hid: int,
                  nlayer: int, dropout: float = 0.5, max_length: int = 500):
-        # Initialize
         super().__init__()
+
+        # Initialize
         self.d_model = d_model
         self.ntoken = ntoken
         self.max_length = max_length
@@ -26,7 +27,7 @@ class Decoder(nn.Module):
         self.embedding_3 = nn.Embedding(self.ntoken, d_model)
         self.embedding_4 = nn.Embedding(self.ntoken, d_model)
 
-        self.pos_encoder = PositionalEncoding(d_model, dropout, max_length)
+        self.pos_encoder = PositionalEncoding(d_model, max_length)
 
         self.linear = nn.Linear(512, d_model)
 
@@ -44,6 +45,7 @@ class Decoder(nn.Module):
         self.init_weights()
 
     def init_weights(self) -> None:
+
         # Initialize
         initrange = 0.1
         self.embedding_1.weight.data.uniform_(-initrange, initrange)
@@ -98,6 +100,8 @@ class Decoder(nn.Module):
         mask = nn.Transformer.generate_square_subsequent_mask(
             len(tgt[0, 0, :]))
 
+        # print(mask.shape)
+
         # Compute embeddings of tgt input of each codebooks
         # Compute sum of four codebooks embeddings
         processed_tgt = (self.embedding_1(tgt[:, 0]) * math.sqrt(self.d_model) +
@@ -105,15 +109,23 @@ class Decoder(nn.Module):
                          self.embedding_3(tgt[:, 2]) * math.sqrt(self.d_model) +
                          self.embedding_4(tgt[:, 3]) * math.sqrt(self.d_model))
 
+        # print(processed_tgt.shape)
+
         # Compute posision encoding of tgt input
         processed_tgt = self.pos_encoder(processed_tgt)
+
+        # print(processed_tgt.shape)
 
         # Convert src input from 512 to d_model
         mem = self.linear(mem)
 
+        # print(mem.shape)
+
         # Compute decoder's output
         decoder_output = nn.functional.relu(self.linear_decoder(
             self.transformer_decoder(processed_tgt, mem, mask)))
+
+        # print(decoder_output.shape)
 
         if status == "train":
             # Compute probbaility distrobute of each codebooks

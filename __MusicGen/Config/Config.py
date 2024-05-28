@@ -12,19 +12,18 @@ mode_table = [["Delay", text_condition_max_length, melody_condition_max_length+3
               ["Parallel", text_condition_max_length, melody_condition_max_length]]
 
 
-training_dataset_batch = 35
-training_dataset_batch_size = 100
+training_max_num_batch = 1
+training_max_num_batch_size = 30
 
-validation_dataset_batch = 1
-validation_dataset_batch_size = 825
+validation_max_num_batch = 1
+validation_max_num_batch_size = 30
 
-test_dataset_batch = 1
-test_dataset_batch_size = 1084
+test_max_num_batch = 1
+test_max_num_batch_size = 30
 
-dir = [["train", training_dataset_batch, training_dataset_batch_size],
-       ["validation", validation_dataset_batch, validation_dataset_batch_size],
-       ["test", test_dataset_batch, test_dataset_batch_size]]
-
+dir = [["train", training_max_num_batch, training_max_num_batch_size],
+       ["validation", validation_max_num_batch, validation_max_num_batch_size],
+       ["test", test_max_num_batch, test_max_num_batch_size]]
 
 word_dropout = 0.2
 
@@ -39,16 +38,20 @@ SP_token = 2049
 
 d_model = 512
 nheads = 8
-nlayer = 10
+nlayer = 12
 d_hid = 2048
 dropout = 0.2
 
 
-epoch_num = 500
+batch_multiplier = 1
+warm_up_epoch = 5
+num_epoch = 300
 
 lr = 0.0001
-betas = (0.9, 0.98)
+betas = (0.9, 0.95)
 eps = 1e-9
+
+guidance_scale = 0.0
 
 PATH = ".//ModelSave//"
 
