@@ -1,4 +1,8 @@
 import os
+import random
+import matplotlib.pyplot as plt
+import numpy as np
+
 import torch
 import copy
 
@@ -14,7 +18,7 @@ from MusicGenModel.Optimizer.Optimizer import Optimizer
 from MusicGenModel.Optimizer.Performance_Metrics import Performance_Metrics
 from MusicGenModel.Compressor.Compressor import Compressor
 from Config.Config import mode_table
-from Config.Config import device, delay_pattern_ntoken, d_model, nheads, nlayer, d_hid, dropout, num_epoch, batch_multiplier, lr, betas, eps, PATH, loss_function_max_length
+from Config.Config import device, d_model, nheads, nlayer, d_hid, dropout, num_epoch, batch_multiplier, lr, betas, eps, PATH, loss_function_max_length
 
 
 '''
@@ -29,10 +33,11 @@ mode_list = mode_table[0]
 mode = mode_list[0]
 text_condition_max_length = mode_list[1]
 melody_condition_max_length = mode_list[2]
+ntoken = mode_list[3]
 
 # Load model
 model = MusicGen(
-    tgt_ntoken=delay_pattern_ntoken,
+    tgt_ntoken=ntoken,
     d_model=d_model,
     nhead=nheads,
     nlayer=nlayer,
@@ -40,7 +45,7 @@ model = MusicGen(
     dropout=dropout,
     melody_condition_max_length=melody_condition_max_length).to(device)
 # model.load_state_dict(torch.load(Path(PATH+mode+"Model_Best.h5")))
-# summary(model)
+summary(model)
 
 # Load ema model
 model_ema = Model_Ema(model)
@@ -90,6 +95,9 @@ count = batch_multiplier
 last_loss = float("inf")
 min_loss = float("inf")
 total_loss = 0.0
+iteration_history = []
+loss_history = []
+lr_history = []
 
 # Start training
 model.train()
@@ -103,14 +111,18 @@ for epoch in range(num_epoch):
     optimizer.zero_grad()
 
     # For training data
-    for file_part in range(len(mem_train_dirs)):
+    shuffle_data = [i for i in range(len(mem_train_dirs))]
+    random.shuffle(shuffle_data)
 
-        # Load file part
+    for file_part in range(len(shuffle_data)):
+
+        selected_data = shuffle_data[file_part]
+
         mem_train_data = torch.load(
-            mem_train_folder_path/mem_train_dirs[file_part], map_location=device)
+            mem_train_folder_path/mem_train_dirs[selected_data], map_location=device)
 
         tgt_train_data = torch.load(
-            tgt_train_folder_path/tgt_train_dirs[file_part], map_location=device)
+            tgt_train_folder_path/tgt_train_dirs[selected_data], map_location=device)
 
         # For each batch
         for batch in range(len(tgt_train_data)):
@@ -151,7 +163,11 @@ for epoch in range(num_epoch):
 
                 # Print loss for each iteration
                 iteration += 1
+                iteration_history.append(iteration)
+                loss_history.append(total_loss)
+                lr_history.append(sechdualer.get_lr())
                 print(f"Iteration: {iteration}, Loss: {total_loss}")
+                print(sechdualer.get_lr())
 
                 # Update recodes
                 count = batch_multiplier
@@ -161,12 +177,6 @@ for epoch in range(num_epoch):
 
                 print("Save...")
 
-                # Save last model
-                torch.save(model.state_dict(), Path(
-                    PATH+mode+"Model_Last.h5"))
-                torch.save(model_ema.model.state_dict(), Path(
-                    PATH+mode+"Model_Ema_Last.h5"))
-
                 # Save best model
                 if min_loss == last_loss or iteration == 1:
                     torch.save(model.state_dict(), Path(
@@ -175,14 +185,18 @@ for epoch in range(num_epoch):
                         PATH+mode+"Model_Ema_Best.h5"))
 
     # For validation data
-    for file_part in range(len(mem_validation_dirs)):
+    shuffle_data = [i for i in range(len(mem_validation_dirs))]
+    random.shuffle(shuffle_data)
 
-        # Load file part
+    for file_part in range(len(shuffle_data)):
+
+        selected_data = shuffle_data[file_part]
+
         mem_validation_data = torch.load(
-            mem_validation_folder_path/mem_validation_dirs[file_part], map_location=device)
+            mem_validation_folder_path/mem_validation_dirs[selected_data], map_location=device)
 
         tgt_validation_data = torch.load(
-            tgt_validation_folder_path/tgt_validation_dirs[file_part], map_location=device)
+            tgt_validation_folder_path/tgt_validation_dirs[selected_data], map_location=device)
 
         # For each batch
         for batch in range(len(tgt_validation_data)):
@@ -223,7 +237,11 @@ for epoch in range(num_epoch):
 
                 # Print loss for each iteration
                 iteration += 1
+                iteration_history.append(iteration)
+                loss_history.append(total_loss)
+                lr_history.append(sechdualer.get_lr())
                 print(f"Iteration: {iteration}, Loss: {total_loss}")
+                print(sechdualer.get_lr())
 
                 # Update recodes
                 count = batch_multiplier
@@ -233,12 +251,6 @@ for epoch in range(num_epoch):
 
                 print("Save...")
 
-                # Save last model
-                torch.save(model.state_dict(), Path(
-                    PATH+mode+"Model_Last.h5"))
-                torch.save(model_ema.model.state_dict(), Path(
-                    PATH+mode+"Model_Ema_Last.h5"))
-
                 # Save best model
                 if min_loss == last_loss or iteration == 1:
                     torch.save(model.state_dict(), Path(
@@ -246,7 +258,22 @@ for epoch in range(num_epoch):
                     torch.save(model_ema.model.state_dict(), Path(
                         PATH+mode+"Model_Ema_Best.h5"))
 
-    # Update learning rate
+    # Save last model
+    torch.save(model.state_dict(), Path(
+        PATH+mode+"Model_Last.h5"))
+    torch.save(model_ema.model.state_dict(), Path(
+        PATH+mode+"Model_Ema_Last.h5"))
+
     sechdualer.step()
 
 print(f"Finish training\nMin_loss = {min_loss}\nLast_loss = {last_loss}")
+
+plt.plot(np.array(iteration_history),
+         np.array(loss_history), label='training loss')
+plt.savefig(Path("loss_history.png"))
+plt.show()
+
+plt.plot(np.array(iteration_history),
+         np.array(lr_history), label='training loss')
+plt.savefig(Path("lr_history.png"))
+plt.show()

@@ -7,7 +7,7 @@ from MusicGenModel.MusicGen.MusicGen import MusicGen
 from MusicGenModel.Optimizer.Performance_Metrics import Performance_Metrics
 from MusicGenModel.Compressor.Compressor import Compressor
 from Config.Config import mode_table
-from Config.Config import device, delay_pattern_ntoken, d_model, nheads, nlayer, d_hid, dropout, PATH, validation_max_num_batch_size
+from Config.Config import device, delay_pattern_ntoken, d_model, nheads, nlayer, d_hid, dropout, PATH, test_max_num_batch_size
 
 
 '''
@@ -32,7 +32,7 @@ model = MusicGen(
     d_hid=d_hid,
     dropout=dropout,
     melody_condition_max_length=melody_condition_max_length).to(device)
-# model.load_state_dict(torch.load(Path(PATH+mode+"Model_Last.h5")))
+model.load_state_dict(torch.load(Path(PATH+mode+"Model_Ema_Best.h5")))
 model.eval()
 
 # Load performance metrics
@@ -41,50 +41,53 @@ FAD = Performance_Metrics()
 # Load compressor
 compressor = Compressor(mode=mode)
 
-# Load validation path
-mem_validation_folder_path = Path(
-    "Dataset/PreproccessedData/validation/MemData")
-if os.path.isdir(mem_validation_folder_path/".ipynb_checkpoints"):
-    (mem_validation_folder_path/".ipynb_checkpoints").rmdir()
-mem_validation_dirs = os.listdir(mem_validation_folder_path)
-mem_validation_dirs.sort()
-
-# Start inference
-print("Inference...")
+# Load test path
+mem_test_folder_path = Path(
+    "Dataset/PreproccessedData/test/MemData")
+if os.path.isdir(mem_test_folder_path/".ipynb_checkpoints"):
+    (mem_test_folder_path/".ipynb_checkpoints").rmdir()
+mem_test_dirs = os.listdir(mem_test_folder_path)
+mem_test_dirs.sort()
 
 with torch.no_grad():
 
-    # For each data file part
-    for file_part in range(len(mem_validation_dirs)):
+    # Start inference
+    print("Inference...")
 
-        mem_validation_data = torch.load(mem_validation_folder_path/mem_validation_dirs[file_part],
-                                         map_location=device, weights_only=True)
+    # For each data file part
+    for file_part in range(len(mem_test_dirs)):
+
+        mem_test_data = torch.load(mem_test_folder_path/mem_test_dirs[file_part],
+                                   map_location=device, weights_only=True)
 
         # For each batch
-        for example in range(len(mem_validation_data[0])):
+        for example in range(len(mem_test_data[0])):
 
             # Inference
-            inferenced_mem_validation_data = torch.reshape(
-                mem_validation_data[0, example, :], (1, text_condition_max_length, -1))
+            inferenced_mem_test_data = torch.reshape(
+                mem_test_data[0, example, :], (1, text_condition_max_length, -1))
 
             # Generate new audio token
             output = model.generation(
-                inferenced_mem_validation_data, mode=mode)
+                inferenced_mem_test_data, mode=mode)
 
             # Decompress new audio token to new audio
             compressor.decompress(
-                output, Path("Dataset/InferenceData/validation/"+mode+"Pattern/"+mode+"Output_"+str(file_part*validation_max_num_batch_size+example)+".wav"))
+                output, Path("Dataset/InferenceData/test/"+mode+"Pattern/"+mode+"Output_"+str(file_part*test_max_num_batch_size+example)+".wav"))
+
+    # Start inference
+    print("Compute FAD Score...")
 
     # Delete unnecessary folder
-    if os.path.isdir(Path("Dataset/OriginalData/music/validation/.ipynb_checkpoints")):
-        (Path("Dataset/OriginalData/music/validation/.ipynb_checkpoints")).rmdir()
+    if os.path.isdir(Path("Dataset/OriginalData/music/test/.ipynb_checkpoints")):
+        (Path("Dataset/OriginalData/music/test/.ipynb_checkpoints")).rmdir()
 
-    if os.path.isdir(Path("Dataset/InferenceData/validation/"+mode+"Pattern/.ipynb_checkpoints")):
-        (Path("Dataset/InferenceData/validation/" +
+    if os.path.isdir(Path("Dataset/InferenceData/test/"+mode+"Pattern/.ipynb_checkpoints")):
+        (Path("Dataset/InferenceData/test/" +
          mode+"Pattern/.ipynb_checkpoints")).rmdir()
 
-    # Compute validation fad
-    fad_score = FAD.FAD(Path("Dataset/OriginalData/music/validation"),
-                        Path("Dataset/InferenceData/validation/"+mode+"Pattern"))
+    # Compute test fad
+    fad_score = FAD.FAD(Path("Dataset/PreproccessedData/test/TgtAudioData"),
+                        Path("Dataset/InferenceData/test/"+mode+"Pattern"))
 
     print(f"Validetion FAD: {fad_score}")

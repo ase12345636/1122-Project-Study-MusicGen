@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 
 from torch.distributions import Categorical
+from torch.nn import TransformerEncoderLayer
 from ..DecoderModel.Decoder import Decoder
 from Config.Config import device, top_k, temperature, SOS_token, SP_token, guidance_scale
 
@@ -17,6 +18,9 @@ class MusicGen(nn.Module):
 
         # Initialize
         self.melody_condition_max_length = melody_condition_max_length
+
+        # self.encoder_layer = TransformerEncoderLayer(
+        #     512, nhead, 2048, dropout, batch_first=True)
 
         self.decoder = Decoder(
             ntoken=tgt_ntoken, d_model=d_model, nhead=nhead, d_hid=d_hid, nlayer=nlayer,
@@ -41,6 +45,7 @@ class MusicGen(nn.Module):
         '''
 
         prediction = self.decoder(tgt, mem)
+        # prediction = self.decoder(tgt, self.encoder_layer(mem))
 
         # print(prediction.shape)
 

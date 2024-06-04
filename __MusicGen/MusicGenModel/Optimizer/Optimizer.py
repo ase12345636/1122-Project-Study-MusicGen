@@ -18,13 +18,15 @@ class CosineLRScheduler(_LRScheduler):
 
         # Initialize
         self.warmup_steps = warmup_steps
-        self.total_steps = total_steps
+        self.total_steps = total_steps+1
         self.lr_min_ratio = lr_min_ratio
         self.cycle_length = cycle_length
 
         super().__init__(optimizer)
 
     def lr_shedualer(self, lr: float, step: int):
+
+        step += 1
 
         # Warm up
         if step < self.warmup_steps:

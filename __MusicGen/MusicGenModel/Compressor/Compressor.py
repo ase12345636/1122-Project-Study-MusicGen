@@ -25,6 +25,20 @@ class Compressor():
 
         self.mode = mode
 
+    def resample_audio(self, src_file_path: str, tgt_file_path: str):
+
+        # Get tgt input
+        audio, _ = torchaudio.load(src_file_path)
+
+        # Convert audio from stereo to mono
+        audio = torch.mean(audio, dim=0)
+
+        # Convert audio sample rate from 48khz to 32khz
+        audio = torch.reshape(self.resampler(audio)[:32000*5], (1, -1))
+
+        torchaudio.save(
+            tgt_file_path, audio, 32000, format="wav")
+
     def compress(self, file_path: list[str]):
         '''
         Input : file_path

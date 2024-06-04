@@ -33,6 +33,7 @@ class Decoder(nn.Module):
 
         decoder_layers = TransformerDecoderLayer(
             d_model, nhead, d_hid, dropout, batch_first=True)
+
         self.transformer_decoder = TransformerDecoder(decoder_layers, nlayer)
 
         self.linear_decoder = nn.Linear(d_model, d_model)

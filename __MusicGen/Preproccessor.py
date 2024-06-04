@@ -197,3 +197,30 @@ for dataset in dir:
         torch.save(
             tgt_data,
             Path("Dataset/PreproccessedData/"+type_dataset+"/TgtData/ParallelPattern/ParallelTgt_part"+str(part)+".pt"))
+
+
+'''
+tgt audio : 5-sec audio with 32k-sample_rate
+'''
+
+# Prepare tgt audio
+compressor = Compressor(
+    max_length=melody_condition_max_length)
+
+type_dataset = dir[2][0]
+max_batch = dir[2][1]
+max_batch_size = dir[2][2]
+
+print("Proccess tgt audio : "+type_dataset+" dataset")
+
+# Load data file
+audio_folder_path = Path("Dataset/OriginalData/music/"+type_dataset)
+audio_dirs = os.listdir(audio_folder_path)
+audio_dirs.sort()
+
+# For each dataset part
+num = 0
+for audio_file in audio_dirs:
+
+    compressor.resample_audio(audio_folder_path/audio_file, Path(
+        "Dataset/PreproccessedData/"+type_dataset+"/TgtAudioData/"+audio_file))
